@@ -59,6 +59,31 @@ GET /analysis/{product_id}
 的电商 AI 自动化工具。
 
 
+## 📡 API 使用示例
+
+### 创建任务
+
+POST /tasks
+
+```json
+{
+  "product_url": "https://example.com/product/123"
+}
+```
+### **查询分析结果**
+返回示例：
+```json
+{
+  "title": "爆款蓝牙耳机",
+  "analysis": "该产品主打性价比..."
+}
+
+
+```
+## 📸 Demo
+<img width="1403" height="653" alt="123" src="https://github.com/user-attachments/assets/fd81f0d6-709d-40a8-9767-cef3324d7d90" />
+
+
 ##🧑‍💻 **作者**
 ---
 lishenghan32
