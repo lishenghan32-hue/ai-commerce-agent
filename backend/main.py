@@ -5,6 +5,10 @@ AI Commerce Insight Generator - FastAPI Backend
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+import os
 
 from backend.config import settings
 from backend.api import routes_products, routes_tasks, routes_test, routes_analysis, routes_production
@@ -31,10 +35,18 @@ app.include_router(routes_test.router, prefix="/api", tags=["test"])
 app.include_router(routes_analysis.router, prefix="/api", tags=["analysis"])
 app.include_router(routes_production.router, prefix="/api", tags=["production"])
 
+# Serve static files
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
+    """Serve index.html"""
+    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
         "message": "AI Commerce Insight Generator API",
         "version": "1.0.0",
