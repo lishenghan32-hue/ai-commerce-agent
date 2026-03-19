@@ -3,7 +3,7 @@ Production API routes
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from backend.services.production_service import ProductionService
 
@@ -34,11 +34,14 @@ class ScriptWithStyle(BaseModel):
     solution: str
     proof: str
     offer: str
+    score: Optional[int] = 0
+    reason: Optional[str] = ""
 
 
 class GenerateMultiStyleScriptsResponse(BaseModel):
     """Response model for multi-style script generation"""
     scripts: List[ScriptWithStyle]
+    best_script: Optional[ScriptWithStyle] = None
 
 
 @router.post("/generate-script-from-comments", response_model=GenerateScriptResponse)
@@ -62,7 +65,7 @@ def generate_script_from_comments(request: GenerateScriptFromCommentsRequest):
 @router.post("/generate-multi-style-scripts-from-comments", response_model=GenerateMultiStyleScriptsResponse)
 def generate_multi_style_scripts_from_comments(request: GenerateScriptFromCommentsRequest):
     """
-    Generate scripts in three different styles from comments
+    Generate scripts in three different styles from comments with scoring
     """
     comments = request.comments
 

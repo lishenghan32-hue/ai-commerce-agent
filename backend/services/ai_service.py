@@ -85,10 +85,13 @@ class AIService:
         Generate scripts in three different styles based on same insights
 
         Returns:
-            Dict with scripts array containing style and script content
+            Dict with scripts array containing style and script content, and best_script
         """
         if not insights:
-            return {"scripts": [self._default_script_with_style(s) for s in ["带货型", "共情型", "理性型"]]}
+            return {
+                "scripts": [self._default_script_with_style(s) for s in ["带货型", "共情型", "理性型"]],
+                "best_script": None
+            }
 
         styles = ["带货型", "共情型", "理性型"]
         scripts = []
@@ -108,13 +111,51 @@ class AIService:
                     "proof": parsed.get("proof") or "",
                     "offer": parsed.get("offer") or ""
                 }
+
+                # Step 2: 对每条脚本进行评分
+                score_result = self.score_script(script)
+                script["score"] = score_result["score"]
+                script["reason"] = score_result["reason"]
+
             except Exception as e:
                 logger.error(f"Failed to generate {style} script: {e}")
                 script = self._default_script_with_style(style)
+                script["score"] = 0
+                script["reason"] = "生成失败"
 
             scripts.append(script)
 
-        return {"scripts": scripts}
+        # Step 3: 找出最佳脚本
+        best_script = max(scripts, key=lambda x: x.get("score", 0))
+
+        return {
+            "scripts": scripts,
+            "best_script": best_script
+        }
+
+    def score_script(self, script: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Score a script for viral potential
+
+        Returns:
+            Dict with score (0-100) and reason
+        """
+        if not script:
+            return {"score": 0, "reason": "脚本为空"}
+
+        try:
+            prompt = self._build_score_prompt(script)
+            raw_response = self._call_api(prompt)
+            json_response = self._extract_json_with_llm(raw_response)
+
+            parsed = json.loads(json_response)
+            return {
+                "score": parsed.get("score") or 0,
+                "reason": parsed.get("reason") or ""
+            }
+        except Exception as e:
+            logger.error(f"Failed to score script: {e}")
+            return {"score": 0, "reason": "评分失败"}
 
     # ==================== 内部方法 ====================
 
@@ -389,6 +430,40 @@ offer:
             "proof": "",
             "offer": ""
         }
+
+    def _build_score_prompt(self, script: Dict[str, Any]) -> str:
+        """Build prompt for script scoring"""
+        prompt = f"""你是一个直播话术评分专家。你的任务是对以下直播带货话术进行"爆款潜力评分"。
+
+话术内容：
+- 风格: {script.get('style', '')}
+- 开头吸引: {script.get('opening_hook', '')}
+- 痛点: {script.get('pain_point', '')}
+- 解决方案: {script.get('solution', '')}
+- 证明: {script.get('proof', '')}
+- 促单: {script.get('offer', '')}
+
+请返回JSON格式:
+{{
+    "score": 0-100,
+    "reason": "评分理由"
+}}
+
+【评分标准】：
+1. 开头吸引力（0-25分）：是否能3秒内抓住注意力
+2. 痛点共鸣（0-20分）：是否能引发用户共鸣
+3. 解决方案说服力（0-20分）：产品是否能有效解决问题
+4. 证明可信度（0-15分）：证据是否真实可信
+5. 促单紧迫感（0-20分）：是否能让用户产生下单冲动
+
+【评分要求】：
+- 分数必须是0-100的整数
+- 理由要简洁，一句话说明核心优势
+- 重点关注转化能力和用户共鸣
+
+只返回JSON。"""
+
+        return prompt
 
     def _build_multi_style_script_prompt(self, insights: Dict[str, Any], style: str) -> str:
         """Build prompt for multi-style script generation"""
