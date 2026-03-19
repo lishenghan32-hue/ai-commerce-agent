@@ -1,4 +1,3 @@
-print("🔥 我真的被执行了")
 """
 AI Commerce Insight Generator - FastAPI Backend
 """
