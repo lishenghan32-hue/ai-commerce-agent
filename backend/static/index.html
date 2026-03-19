@@ -253,6 +253,69 @@
         .result-header-green {
             background-color: #22c55e;
         }
+        /* Score styles */
+        .score-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .score-high {
+            background-color: #4cd964;
+            color: white;
+        }
+        .score-medium {
+            background-color: #ff9500;
+            color: white;
+        }
+        .score-low {
+            background-color: #ff4757;
+            color: white;
+        }
+        .best-script-badge {
+            background-color: #ffd700;
+            color: #333;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .best-script-section {
+            border: 3px solid #ffd700;
+            position: relative;
+        }
+        .best-script-label {
+            position: absolute;
+            top: -12px;
+            right: 20px;
+            background-color: #ffd700;
+            color: #333;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1;
+        }
+        .recommendation-section {
+            background: linear-gradient(135deg, #fff9e6 0%, #ffecd2 100%);
+            border: 2px solid #ffd700;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .recommendation-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .recommendation-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -474,14 +537,82 @@
                     '理性型': { class: 'lixing', headerClass: 'result-header-green' }
                 };
 
-                // 渲染三种风格
-                resultDiv.innerHTML = data.scripts.map((script, index) => {
+                // 获取分数样式
+                function getScoreClass(score) {
+                    if (score >= 80) return 'score-high';
+                    if (score >= 60) return 'score-medium';
+                    return 'score-low';
+                }
+
+                // 找出最佳脚本的索引
+                const bestIndex = data.scripts.findIndex(s => s.style === data.best_script?.style);
+
+                // 先渲染推荐最佳脚本
+                let html = '';
+                if (data.best_script) {
+                    const bestStyleInfo = styleMap[data.best_script.style] || styleMap['带货型'];
+                    html += `
+                        <div class="recommendation-section">
+                            <div class="recommendation-header">
+                                <span class="recommendation-title">推荐最佳脚本</span>
+                                <span class="best-script-badge">${data.best_script.style} · ${data.best_script.score}分</span>
+                            </div>
+                            <div class="result-section">
+                                <div class="result-header ${bestStyleInfo.headerClass}">
+                                    <span>【开头吸引】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(data.best_script.opening_hook)}')">复制</button>
+                                </div>
+                                <div class="result-content">${data.best_script.opening_hook}</div>
+                            </div>
+                            <div class="result-section">
+                                <div class="result-header ${bestStyleInfo.headerClass}">
+                                    <span>【痛点】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(data.best_script.pain_point)}')">复制</button>
+                                </div>
+                                <div class="result-content">${data.best_script.pain_point}</div>
+                            </div>
+                            <div class="result-section">
+                                <div class="result-header ${bestStyleInfo.headerClass}">
+                                    <span>【解决方案】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(data.best_script.solution)}')">复制</button>
+                                </div>
+                                <div class="result-content">${data.best_script.solution}</div>
+                            </div>
+                            <div class="result-section">
+                                <div class="result-header ${bestStyleInfo.headerClass}">
+                                    <span>【证明】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(data.best_script.proof)}')">复制</button>
+                                </div>
+                                <div class="result-content">${data.best_script.proof}</div>
+                            </div>
+                            <div class="result-section">
+                                <div class="result-header ${bestStyleInfo.headerClass}">
+                                    <span>【促单】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(data.best_script.offer)}')">复制</button>
+                                </div>
+                                <div class="result-content">${data.best_script.offer}</div>
+                            </div>
+                            <div style="margin-top: 15px; padding: 10px; background: rgba(255,215,0,0.2); border-radius: 4px; font-size: 13px; color: #666;">
+                                <strong>评分理由：</strong>${data.best_script.reason}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // 渲染三种风格（包含评分）
+                html += data.scripts.map((script, index) => {
                     const styleInfo = styleMap[script.style] || styleMap['带货型'];
+                    const isBest = index === bestIndex;
+                    const scoreClass = getScoreClass(script.score || 0);
                     return `
-                        <div class="style-section ${styleInfo.class}">
+                        <div class="style-section ${styleInfo.class} ${isBest ? 'best-script-section' : ''}">
+                            ${isBest ? '<div class="best-script-label">最佳脚本</div>' : ''}
                             <div class="style-header">
                                 <div>
-                                    <div class="style-title">${script.style}</div>
+                                    <div class="style-title">
+                                        ${script.style}
+                                        <span class="score-badge ${scoreClass}">${script.score || 0}分</span>
+                                    </div>
                                     <div class="style-desc">${getStyleDescription(script.style)}</div>
                                 </div>
                                 <button class="copy-all-btn" onclick="copyFullStyleScript(this, ${index})">复制完整话术</button>
@@ -530,8 +661,11 @@
                     `;
                 }).join('');
 
+                resultDiv.innerHTML = html;
+
                 // 保存脚本数据供复制完整话术使用
                 window.generatedStyleScripts = data.scripts;
+                window.bestScript = data.best_script;
 
             } catch (error) {
                 resultDiv.innerHTML = `<div class="error">生成失败，请重试</div>`;
