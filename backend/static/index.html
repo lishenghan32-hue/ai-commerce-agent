@@ -162,6 +162,97 @@
             padding: 30px;
             font-size: 16px;
         }
+        /* Tab styles */
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background-color: #f0f0f0;
+            color: #666;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background-color: #ff4757;
+            color: white;
+            border-color: #ff4757;
+        }
+        .tab-btn:hover:not(.active) {
+            border-color: #ff4757;
+            color: #ff4757;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Style section colors */
+        .style-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .style-section.daihuo {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e3 100%);
+            border: 2px solid #ff4757;
+        }
+        .style-section.gongqing {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #0ea5e9;
+        }
+        .style-section.lixing {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 2px solid #22c55e;
+        }
+        .style-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid;
+        }
+        .style-section.daihuo .style-header {
+            border-color: #ff4757;
+        }
+        .style-section.gongqing .style-header {
+            border-color: #0ea5e9;
+        }
+        .style-section.lixing .style-header {
+            border-color: #22c55e;
+        }
+        .style-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .style-section.daihuo .style-title {
+            color: #ff4757;
+        }
+        .style-section.gongqing .style-title {
+            color: #0ea5e9;
+        }
+        .style-section.lixing .style-title {
+            color: #22c55e;
+        }
+        .style-desc {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .result-header-blue {
+            background-color: #0ea5e9;
+        }
+        .result-header-green {
+            background-color: #22c55e;
+        }
     </style>
 </head>
 <body>
@@ -173,12 +264,33 @@
             <textarea id="comments" placeholder="效果很好&#10;价格有点贵&#10;会反弹吗"></textarea>
         </div>
 
-        <button id="generateBtn" onclick="generateScripts()">生成3条脚本</button>
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('multi')">多脚本生成</button>
+            <button class="tab-btn" onclick="switchTab('style')">三风格脚本</button>
+        </div>
+
+        <!-- 多脚本生成 tab -->
+        <div id="tab-multi" class="tab-content active">
+            <button id="generateBtn" onclick="generateScripts()">生成3条脚本</button>
+        </div>
+
+        <!-- 三风格脚本 tab -->
+        <div id="tab-style" class="tab-content">
+            <button id="generateStyleBtn" onclick="generateStyleScripts()">生成三风格脚本</button>
+        </div>
 
         <div id="result"></div>
     </div>
 
     <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
         // 随机提示列表
         const tips = [
             "请用不同表达方式",
@@ -321,6 +433,123 @@
             }
         }
 
+        async function generateStyleScripts() {
+            const commentsText = document.getElementById('comments').value;
+            const resultDiv = document.getElementById('result');
+            const btn = document.getElementById('generateStyleBtn');
+
+            // Validate input
+            const comments = commentsText.split('\n').map(c => c.trim()).filter(c => c);
+
+            if (comments.length === 0) {
+                resultDiv.innerHTML = '<div class="error">请输入评论内容</div>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            // Show loading
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            resultDiv.innerHTML = '<div class="loading">正在生成三种风格脚本，请稍候...</div>';
+            resultDiv.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/generate-multi-style-scripts-from-comments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ comments: comments })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || '请求失败');
+                }
+
+                const styleMap = {
+                    '带货型': { class: 'daihuo', headerClass: '' },
+                    '共情型': { class: 'gongqing', headerClass: 'result-header-blue' },
+                    '理性型': { class: 'lixing', headerClass: 'result-header-green' }
+                };
+
+                // 渲染三种风格
+                resultDiv.innerHTML = data.scripts.map((script, index) => {
+                    const styleInfo = styleMap[script.style] || styleMap['带货型'];
+                    return `
+                        <div class="style-section ${styleInfo.class}">
+                            <div class="style-header">
+                                <div>
+                                    <div class="style-title">${script.style}</div>
+                                    <div class="style-desc">${getStyleDescription(script.style)}</div>
+                                </div>
+                                <button class="copy-all-btn" onclick="copyFullStyleScript(this, ${index})">复制完整话术</button>
+                            </div>
+
+                            <div class="result-section">
+                                <div class="result-header ${styleInfo.headerClass}">
+                                    <span>【开头吸引】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(script.opening_hook)}')">复制</button>
+                                </div>
+                                <div class="result-content">${script.opening_hook}</div>
+                            </div>
+
+                            <div class="result-section">
+                                <div class="result-header ${styleInfo.headerClass}">
+                                    <span>【痛点】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(script.pain_point)}')">复制</button>
+                                </div>
+                                <div class="result-content">${script.pain_point}</div>
+                            </div>
+
+                            <div class="result-section">
+                                <div class="result-header ${styleInfo.headerClass}">
+                                    <span>【解决方案】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(script.solution)}')">复制</button>
+                                </div>
+                                <div class="result-content">${script.solution}</div>
+                            </div>
+
+                            <div class="result-section">
+                                <div class="result-header ${styleInfo.headerClass}">
+                                    <span>【证明】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(script.proof)}')">复制</button>
+                                </div>
+                                <div class="result-content">${script.proof}</div>
+                            </div>
+
+                            <div class="result-section">
+                                <div class="result-header ${styleInfo.headerClass}">
+                                    <span>【促单】</span>
+                                    <button class="copy-btn" onclick="copyText(this, '${escapeHtml(script.offer)}')">复制</button>
+                                </div>
+                                <div class="result-content">${script.offer}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // 保存脚本数据供复制完整话术使用
+                window.generatedStyleScripts = data.scripts;
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">生成失败，请重试</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '生成三风格脚本';
+            }
+        }
+
+        function getStyleDescription(style) {
+            const descriptions = {
+                '带货型': '快节奏、高紧迫感、让人来不及思考就下单',
+                '共情型': '真诚、理解、让人感到温暖和被关心',
+                '理性型': '有理有据、逻辑清晰、消除理性顾虑'
+            };
+            return descriptions[style] || '';
+        }
+
         function escapeHtml(text) {
             return text
                 .replace(/&/g, '&amp;')
@@ -349,6 +578,21 @@
         async function copyFullScript(btn, index) {
             try {
                 const fullScript = mergeScript(window.generatedScripts[index]);
+                await navigator.clipboard.writeText(fullScript);
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '复制完整话术';
+                    btn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+            }
+        }
+
+        async function copyFullStyleScript(btn, index) {
+            try {
+                const fullScript = mergeScript(window.generatedStyleScripts[index]);
                 await navigator.clipboard.writeText(fullScript);
                 btn.textContent = '已复制';
                 btn.classList.add('copied');

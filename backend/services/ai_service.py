@@ -80,6 +80,42 @@ class AIService:
             logger.error(f"Failed to parse JSON: {json_response}")
             return self._default_script()
 
+    def generate_multi_style_scripts(self, insights: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate scripts in three different styles based on same insights
+
+        Returns:
+            Dict with scripts array containing style and script content
+        """
+        if not insights:
+            return {"scripts": [self._default_script_with_style(s) for s in ["带货型", "共情型", "理性型"]]}
+
+        styles = ["带货型", "共情型", "理性型"]
+        scripts = []
+
+        for style in styles:
+            try:
+                prompt = self._build_multi_style_script_prompt(insights, style)
+                raw_response = self._call_api(prompt)
+                json_response = self._extract_json_with_llm(raw_response)
+
+                parsed = json.loads(json_response)
+                script = {
+                    "style": style,
+                    "opening_hook": parsed.get("opening_hook") or "",
+                    "pain_point": parsed.get("pain_point") or "",
+                    "solution": parsed.get("solution") or "",
+                    "proof": parsed.get("proof") or "",
+                    "offer": parsed.get("offer") or ""
+                }
+            except Exception as e:
+                logger.error(f"Failed to generate {style} script: {e}")
+                script = self._default_script_with_style(style)
+
+            scripts.append(script)
+
+        return {"scripts": scripts}
+
     # ==================== 内部方法 ====================
 
     def _call_api(self, prompt: str) -> str:
@@ -342,3 +378,172 @@ offer:
             "proof": "",
             "offer": ""
         }
+
+    def _default_script_with_style(self, style: str) -> Dict[str, Any]:
+        """Return default script response with style"""
+        return {
+            "style": style,
+            "opening_hook": "",
+            "pain_point": "",
+            "solution": "",
+            "proof": "",
+            "offer": ""
+        }
+
+    def _build_multi_style_script_prompt(self, insights: Dict[str, Any], style: str) -> str:
+        """Build prompt for multi-style script generation"""
+
+        base_content = f"""用户洞察：
+- 痛点: {insights.get('pain_points', [])}
+- 卖点: {insights.get('selling_points', [])}
+- 顾虑: {insights.get('concerns', [])}
+- 使用场景: {insights.get('use_cases', [])}"""
+
+        if style == "带货型":
+            prompt = f"""你是一名抖音/直播带货主播，擅长用"冲动消费"风格逼单。
+你的任务是：
+根据用户评论洞察，生成一段"快节奏、高紧迫感、让人来不及思考就下单"的带货话术。
+
+{base_content}
+
+请返回JSON格式:
+{{
+    "opening_hook": "",
+    "pain_point": "",
+    "solution": "",
+    "proof": "",
+    "offer": ""
+}}
+
+【带货型风格要求（必须严格执行）】：
+1. 快节奏、短句、干脆利落
+2. 强调紧迫感：限时、限量、马上没
+3. 催单感强烈，不断施压
+4. 用倒计时、库存紧张等手段
+5. 每一句都要有"抢"的感觉
+
+opening_hook:
+- 3秒内必须抓住注意力
+- 用夸张、反问、数字吸引
+
+pain_point:
+- 快速点出痛点，不拖泥带水
+
+solution:
+- 立即引出产品解决问题
+
+proof:
+- 用"抢疯了"、"卖爆了"、"不够卖"等词
+- 强调大家都抢到了
+
+offer:
+- 必须是限时限量
+- 强调"现在"、"马上"、"立即"
+- 禁止温和引导，必须强势催单
+
+示例风格：
+"最后50单！抢完恢复原价！"
+"家人们，手慢无啊！"
+
+只返回JSON。"""
+
+        elif style == "共情型":
+            prompt = f"""你是一名抖音/直播带货主播，擅长用"理解用户、情感共鸣"风格转化。
+你的任务是：
+根据用户评论洞察，生成一段"真诚、理解、让人感到温暖"的共情话术。
+
+{base_content}
+
+请返回JSON格式:
+{{
+    "opening_hook": "",
+    "pain_point": "",
+    "solution": "",
+    "proof": "",
+    "offer": ""
+}}
+
+【共情型风格要求（必须严格执行）】：
+1. 真诚、理解、体贴
+2. 说出用户的心声，让他们感觉"你懂我"
+3. 用第一人称"我理解你"、"我也曾..."
+4. 语气温柔但不软弱
+5. 让人感到被理解和关心
+
+opening_hook:
+- 用理解开场，让用户感到被看见
+- "我知道你..."
+
+pain_point:
+- 说出用户的无奈和困扰
+- 让他们感到被理解
+
+solution:
+- 像朋友推荐一样真诚
+
+proof:
+- 用真实用户的感谢故事
+- 强调"用户说"、"粉丝反馈"
+- 让人感到温暖
+
+offer:
+- 像朋友帮忙的温柔推荐
+- 不施压，而是"帮你争取"
+- 让用户主动想要
+
+示例风格：
+"我特别理解你的顾虑..."
+"很多宝宝都跟我说..."
+
+只返回JSON。"""
+
+        else:  # 理性型
+            prompt = f"""你是一名抖音/直播带货主播，擅长用"理性分析、逻辑说服"风格转化。
+你的任务是：
+根据用户评论洞察，生成一段"有理有据、对比分析、让人信服"的理性话术。
+
+{base_content}
+
+请返回JSON格式:
+{{
+    "opening_hook": "",
+    "pain_point": "",
+    "solution": "",
+    "proof": "",
+    "offer": ""
+}}
+
+【理性型风格要求（必须严格执行）】：
+1. 逻辑清晰、有理有据
+2. 善于对比分析、拆解原理
+3. 用数据、事实说话
+4. 消除用户理性顾虑
+5. 让人"想清楚"后下单
+
+opening_hook:
+- 用问题引发思考
+- "你确定不了解一下？"
+
+pain_point:
+- 理性分析不解决的问题的代价
+
+solution:
+- 拆解产品如何解决问题
+- 讲原理、成分、逻辑
+
+proof:
+- 用数据、案例、对比
+- "实验显示"、"数据证明"
+
+offer:
+- 像限时福利/知识分享
+- 强调"帮你算账"、"帮你对比"
+- 理性分析后觉得值得买
+
+示例风格：
+"我帮你算一笔账..."
+"从科学角度来说..."
+
+只返回JSON。"""
+
+        return prompt

@@ -32,3 +32,24 @@ class ProductionService:
         script = self.ai_service.generate_script(insights)
 
         return script
+
+    def generate_multi_style_scripts_from_comments(self, comments: List[str]) -> Dict[str, Any]:
+        """
+        Generate scripts in three different styles from comments
+
+        Args:
+            comments: List of comment strings
+
+        Returns:
+            Dict with scripts array containing three styles
+
+        Raises:
+            Exception: If any step fails
+        """
+        # Step 1: Analyze comments to get insights
+        insights = self.ai_service.analyze_comments(comments)
+
+        # Step 2: Generate multi-style scripts from insights
+        result = self.ai_service.generate_multi_style_scripts(insights)
+
+        return result
