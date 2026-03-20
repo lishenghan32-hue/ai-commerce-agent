@@ -188,6 +188,30 @@
             border-color: #ff4757;
             color: #ff4757;
         }
+        /* Export buttons */
+        .export-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .export-btn {
+            flex: 1;
+            padding: 10px 16px;
+            background-color: #4a90d9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .export-btn:hover {
+            background-color: #5aa0e9;
+        }
+        .export-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         .tab-content {
             display: none;
         }
@@ -340,6 +364,10 @@
         <!-- 三风格脚本 tab -->
         <div id="tab-style" class="tab-content">
             <button id="generateStyleBtn" onclick="generateStyleScripts()">生成三风格脚本</button>
+            <div class="export-btns">
+                <button id="exportTxtBtn" class="export-btn" onclick="exportScripts('txt')" disabled>导出 TXT</button>
+                <button id="exportMdBtn" class="export-btn" onclick="exportScripts('md')" disabled>导出 Markdown</button>
+            </div>
         </div>
 
         <div id="result"></div>
@@ -667,6 +695,10 @@
                 window.generatedStyleScripts = data.scripts;
                 window.bestScript = data.best_script;
 
+                // 启用导出按钮
+                document.getElementById('exportTxtBtn').disabled = false;
+                document.getElementById('exportMdBtn').disabled = false;
+
             } catch (error) {
                 resultDiv.innerHTML = `<div class="error">生成失败，请重试</div>`;
             } finally {
@@ -736,6 +768,49 @@
                 }, 2000);
             } catch (err) {
                 console.error('复制失败:', err);
+            }
+        }
+
+        async function exportScripts(format) {
+            if (!window.bestScript || !window.generatedStyleScripts) {
+                alert('请先生成脚本');
+                return;
+            }
+
+            const btn = format === 'txt' ? document.getElementById('exportTxtBtn') : document.getElementById('exportMdBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '导出中...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/export-scripts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        best_script: window.bestScript,
+                        scripts: window.generatedStyleScripts,
+                        format: format
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || '导出失败');
+                }
+
+                // 触发下载
+                window.location.href = data.download_url;
+
+                btn.textContent = '导出成功';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            } catch (err) {
+                alert('导出失败: ' + err.message);
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
         }
     </script>

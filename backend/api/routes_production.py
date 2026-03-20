@@ -6,10 +6,12 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from backend.services.production_service import ProductionService
+from backend.services.export_service import ExportService
 
 router = APIRouter()
 
 production_service = ProductionService()
+export_service = ExportService()
 
 
 class GenerateScriptFromCommentsRequest(BaseModel):
@@ -42,6 +44,18 @@ class GenerateMultiStyleScriptsResponse(BaseModel):
     """Response model for multi-style script generation"""
     scripts: List[ScriptWithStyle]
     best_script: Optional[ScriptWithStyle] = None
+
+
+class ExportScriptsRequest(BaseModel):
+    """Request model for exporting scripts"""
+    best_script: Optional[ScriptWithStyle] = None
+    scripts: List[ScriptWithStyle] = []
+    format: str = "txt"
+
+
+class ExportScriptsResponse(BaseModel):
+    """Response model for export"""
+    download_url: str
 
 
 @router.post("/generate-script-from-comments", response_model=GenerateScriptResponse)
@@ -78,3 +92,20 @@ def generate_multi_style_scripts_from_comments(request: GenerateScriptFromCommen
         raise HTTPException(status_code=500, detail=str(e))
 
     return GenerateMultiStyleScriptsResponse(**result)
+
+
+@router.post("/export-scripts", response_model=ExportScriptsResponse)
+def export_scripts(request: ExportScriptsRequest):
+    """
+    Export scripts to TXT or Markdown file
+    """
+    try:
+        result = export_service.export_scripts(
+            best_script=request.best_script,
+            scripts=request.scripts,
+            format=request.format
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return ExportScriptsResponse(**result)
