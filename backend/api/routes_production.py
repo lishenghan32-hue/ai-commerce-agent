@@ -100,9 +100,13 @@ def export_scripts(request: ExportScriptsRequest):
     Export scripts to TXT or Markdown file
     """
     try:
+        # 转换 Pydantic 模型为 dict
+        best_script_dict = request.best_script.model_dump() if request.best_script else None
+        scripts_dicts = [s.model_dump() for s in request.scripts] if request.scripts else []
+
         result = export_service.export_scripts(
-            best_script=request.best_script,
-            scripts=request.scripts,
+            best_script=best_script_dict,
+            scripts=scripts_dicts,
             format=request.format
         )
     except Exception as e:
