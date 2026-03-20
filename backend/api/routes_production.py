@@ -1,6 +1,9 @@
 """
 Production API routes
 """
+import os
+from urllib.parse import quote
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -102,7 +105,8 @@ def export_scripts(request: ExportScriptsRequest):
 
         # 生成内容
         export_svc = ExportService()
-        if request.format == "md":
+        file_format = request.format
+        if file_format == "md":
             content = export_svc._generate_markdown(best_script_dict, scripts_dicts)
             media_type = "text/markdown"
             ext = "md"
@@ -111,12 +115,16 @@ def export_scripts(request: ExportScriptsRequest):
             media_type = "text/plain; charset=utf-8"
             ext = "txt"
 
-        filename = f"直播话术_{request.format}"
+        filename = f"live_script_{file_format}"
+
+        # 使用 RFC 5987 格式支持中文文件名
+        encoded_filename = quote(filename)
+        content_disposition = f"attachment; filename={filename}.{ext}; filename*=UTF-8''{encoded_filename}.{ext}"
 
         return Response(
             content=content,
             media_type=media_type,
-            headers={"Content-Disposition": f"attachment; filename={filename}.{ext}"}
+            headers={"Content-Disposition": content_disposition}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
