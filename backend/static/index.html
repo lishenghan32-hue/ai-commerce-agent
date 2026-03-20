@@ -783,12 +783,6 @@
             btn.disabled = true;
 
             try {
-                console.log('Exporting...', {
-                    best_script: window.bestScript,
-                    scripts: window.generatedStyleScripts,
-                    format: format
-                });
-
                 const response = await fetch('/api/export-scripts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -799,17 +793,21 @@
                     })
                 });
 
-                console.log('Response status:', response.status);
-
-                const data = await response.json();
-                console.log('Response data:', data);
-
                 if (!response.ok) {
+                    const data = await response.json();
                     throw new Error(data.detail || '导出失败');
                 }
 
-                // 触发下载
-                window.location.href = data.download_url;
+                // 获取 blob 并强制下载
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `直播话术_${new Date().getTime()}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
 
                 btn.textContent = '导出成功';
                 setTimeout(() => {

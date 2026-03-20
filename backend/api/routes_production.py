@@ -2,6 +2,7 @@
 Production API routes
 """
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -53,11 +54,6 @@ class ExportScriptsRequest(BaseModel):
     format: str = "txt"
 
 
-class ExportScriptsResponse(BaseModel):
-    """Response model for export"""
-    download_url: str
-
-
 @router.post("/generate-script-from-comments", response_model=GenerateScriptResponse)
 def generate_script_from_comments(request: GenerateScriptFromCommentsRequest):
     """
@@ -94,7 +90,7 @@ def generate_multi_style_scripts_from_comments(request: GenerateScriptFromCommen
     return GenerateMultiStyleScriptsResponse(**result)
 
 
-@router.post("/export-scripts", response_model=ExportScriptsResponse)
+@router.post("/export-scripts")
 def export_scripts(request: ExportScriptsRequest):
     """
     Export scripts to TXT or Markdown file
@@ -104,12 +100,23 @@ def export_scripts(request: ExportScriptsRequest):
         best_script_dict = request.best_script.model_dump() if request.best_script else None
         scripts_dicts = [s.model_dump() for s in request.scripts] if request.scripts else []
 
-        result = export_service.export_scripts(
-            best_script=best_script_dict,
-            scripts=scripts_dicts,
-            format=request.format
+        # 生成内容
+        export_svc = ExportService()
+        if request.format == "md":
+            content = export_svc._generate_markdown(best_script_dict, scripts_dicts)
+            media_type = "text/markdown"
+            ext = "md"
+        else:
+            content = export_svc._generate_txt(best_script_dict, scripts_dicts)
+            media_type = "text/plain; charset=utf-8"
+            ext = "txt"
+
+        filename = f"直播话术_{request.format}"
+
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}.{ext}"}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-    return ExportScriptsResponse(**result)
