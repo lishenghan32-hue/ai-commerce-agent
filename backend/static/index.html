@@ -783,6 +783,12 @@
             btn.disabled = true;
 
             try {
+                console.log('Exporting...', {
+                    best_script: window.bestScript,
+                    scripts: window.generatedStyleScripts,
+                    format: format
+                });
+
                 const response = await fetch('/api/export-scripts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -793,7 +799,10 @@
                     })
                 });
 
+                console.log('Response status:', response.status);
+
                 const data = await response.json();
+                console.log('Response data:', data);
 
                 if (!response.ok) {
                     throw new Error(data.detail || '导出失败');
@@ -808,6 +817,7 @@
                     btn.disabled = false;
                 }, 2000);
             } catch (err) {
+                console.error('Export error:', err);
                 alert('导出失败: ' + err.message);
                 btn.textContent = originalText;
                 btn.disabled = false;
