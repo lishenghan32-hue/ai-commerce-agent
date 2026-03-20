@@ -12,63 +12,105 @@
     <section class="hero">
         <h1 class="hero-title">直播带货话术生成器</h1>
         <p class="hero-subtitle">输入用户评论，AI 智能生成爆款直播话术</p>
-        <a href="#input-card" class="hero-btn">开始生成</a>
     </section>
 
-    <!-- Main Card -->
-    <main class="main">
-        <div id="input-card" class="card">
-            <div class="card-header">
-                <h2>生成话术</h2>
-                <p class="card-hint">输入越真实，效果越好</p>
+    <!-- Main Container - Two Columns -->
+    <main class="container">
+        <div class="two-columns">
+            <!-- Left Column: Input -->
+            <div class="column left-column">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>输入信息</h2>
+                        <p class="card-hint">输入越真实，效果越好</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-name">商品名称</label>
+                        <input type="text" id="product-name" placeholder="例如：美白精华液">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-info">商品描述</label>
+                        <input type="text" id="product-info" placeholder="例如：主打美白提亮，28天见效">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="comments">用户评论</label>
+                        <textarea id="comments" placeholder="每行一条评论&#10;效果很好，就是有点贵&#10;用了一周变白了&#10;会回购"></textarea>
+                    </div>
+
+                    <div class="example-btns">
+                        <span class="example-label">使用示例：</span>
+                        <button class="example-btn" onclick="loadExample(1)">美妆</button>
+                        <button class="example-btn" onclick="loadExample(2)">数码</button>
+                        <button class="example-btn" onclick="loadExample(3)">食品</button>
+                        <button class="example-btn" onclick="loadExample(4)">服装</button>
+                    </div>
+
+                    <div class="example-btns" style="margin-top: 10px;">
+                        <button class="example-btn secondary" onclick="generateTestComments()">✨ AI生成测试评论</button>
+                    </div>
+
+                    <button id="generate-btn" class="btn-primary" onclick="generateScripts()">
+                        生成脚本
+                    </button>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="product-name">商品名称</label>
-                <input type="text" id="product-name" placeholder="例如：美白精华液">
-            </div>
+            <!-- Right Column: Results -->
+            <div class="column right-column">
+                <div class="card result-card">
+                    <div class="card-header">
+                        <h2>生成结果</h2>
+                        <p class="card-hint">点击卡片展开查看详情</p>
+                    </div>
 
-            <div class="form-group">
-                <label for="product-info">商品描述</label>
-                <input type="text" id="product-info" placeholder="例如：主打美白提亮，28天见效">
-            </div>
+                    <!-- Empty State -->
+                    <div id="empty-state" class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <p>填写左侧信息，点击生成按钮</p>
+                        <p class="empty-hint">AI 将为您生成直播话术</p>
+                    </div>
 
-            <div class="form-group">
-                <label for="comments">用户评论</label>
-                <textarea id="comments" placeholder="每行一条评论&#10;效果很好，就是有点贵&#10;用了一周变白了&#10;会回购"></textarea>
-            </div>
+                    <!-- Loading State -->
+                    <div id="loading" class="loading-state" style="display: none;">
+                        <div class="progress-steps">
+                            <div class="step" id="step-1">
+                                <div class="step-icon">1</div>
+                                <div class="step-content">
+                                    <div class="step-title">分析评论</div>
+                                    <div class="step-desc">提取用户痛点和需求</div>
+                                </div>
+                            </div>
+                            <div class="step-line"></div>
+                            <div class="step" id="step-2">
+                                <div class="step-icon">2</div>
+                                <div class="step-content">
+                                    <div class="step-title">生成话术</div>
+                                    <div class="step-desc">构建直播脚本框架</div>
+                                </div>
+                            </div>
+                            <div class="step-line"></div>
+                            <div class="step" id="step-3">
+                                <div class="step-icon">3</div>
+                                <div class="step-content">
+                                    <div class="step-title">优化完善</div>
+                                    <div class="step-desc">添加爆款元素</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="loading-text">AI 正在工作中，请稍候...</p>
+                    </div>
 
-            <div class="example-btns">
-                <span class="example-label">使用示例：</span>
-                <button class="example-btn" onclick="loadExample(1)">美妆产品</button>
-                <button class="example-btn" onclick="loadExample(2)">数码产品</button>
-                <button class="example-btn" onclick="loadExample(3)">食品饮料</button>
-                <button class="example-btn" onclick="loadExample(4)">服装配饰</button>
-            </div>
+                    <!-- Error State -->
+                    <div id="error" class="error" style="display: none;"></div>
 
-            <div class="example-btns" style="margin-top: 10px;">
-                <button class="example-btn secondary" onclick="generateTestComments()">✨ AI生成测试评论</button>
+                    <!-- Results Content -->
+                    <div id="results-content" class="results-list" style="display: none;"></div>
+                </div>
             </div>
-
-            <button id="generate-btn" class="btn-primary" onclick="generateScripts()">
-                生成脚本
-            </button>
         </div>
-
-        <!-- Results Section -->
-        <section id="results" class="results">
-            <!-- Loading -->
-            <div id="loading" class="loading" style="display: none;">
-                <div class="spinner"></div>
-                <p>AI 正在生成话术...</p>
-            </div>
-
-            <!-- Error -->
-            <div id="error" class="error" style="display: none;"></div>
-
-            <!-- Results Content -->
-            <div id="results-content" style="display: none;"></div>
-        </section>
     </main>
 
     <!-- Footer -->
