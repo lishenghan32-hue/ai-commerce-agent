@@ -43,6 +43,13 @@ body {
     margin-top: 8px;
 }
 
+.hero-tip {
+    font-size: 14px;
+    color: #667eea;
+    margin-top: 12px;
+    font-weight: 500;
+}
+
 /* ========================================
    Container & Two Columns
    ======================================== */
@@ -97,7 +104,7 @@ body {
 }
 
 .card-header {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .card-header h2 {
@@ -110,6 +117,40 @@ body {
 .card-hint {
     font-size: 14px;
     color: #999;
+}
+
+/* ========================================
+   Input Tip
+   ======================================== */
+.input-tip {
+    font-size: 13px;
+    color: #667eea;
+    background: #f8f9ff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* ========================================
+   Toggle Button
+   ======================================== */
+.toggle-btn {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px dashed #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 16px;
+}
+
+.toggle-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
 }
 
 /* ========================================
@@ -453,6 +494,64 @@ body {
     background: #f8f9ff;
 }
 
+/* Script Header - Quick Actions */
+.script-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.script-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.script-meta .tag {
+    padding: 4px 10px;
+    background: #667eea;
+    color: white;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+.script-meta .score {
+    font-size: 12px;
+    color: #888;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.quick-actions button {
+    padding: 5px 10px;
+    font-size: 11px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-actions button:hover {
+    background: #f5f5f5;
+    border-color: #667eea;
+    color: #667eea;
+}
+
 /* Header */
 .result-header {
     display: flex;
@@ -534,7 +633,6 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
     margin-bottom: 6px;
 }
 
@@ -572,6 +670,21 @@ body {
     padding-left: 14px;
 }
 
+/* Opening Hook - Enhanced */
+.script-part:first-child .script-part-content {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111;
+}
+
+/* Offer - Highlight */
+.script-part:last-child .script-part-content {
+    background: #fff5f5;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border-left: 3px solid #ff4757;
+}
+
 /* Footer Actions */
 .result-footer {
     display: none;
@@ -592,11 +705,15 @@ body {
 
 /* Rewrite buttons */
 .rewrite-footer {
-    display: flex;
+    display: none;
     gap: 8px;
     padding: 12px 16px;
     border-top: 1px solid #f0f0f0;
     flex-wrap: wrap;
+}
+
+.result-item.expanded .rewrite-footer {
+    display: flex;
 }
 
 .rewrite-btn {

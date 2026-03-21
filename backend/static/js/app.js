@@ -2,6 +2,23 @@
    极简高级风格 - JavaScript
    ======================================== */
 
+// Toggle advanced inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('toggleAdvanced');
+    const advanced = document.querySelector('.advanced-inputs');
+    if (toggleBtn && advanced) {
+        toggleBtn.addEventListener('click', () => {
+            if (advanced.style.display === 'none') {
+                advanced.style.display = 'block';
+                toggleBtn.innerText = '收起 ▲';
+            } else {
+                advanced.style.display = 'none';
+                toggleBtn.innerText = '展开更多信息 ▼';
+            }
+        });
+    }
+});
+
 // Example data
 const examples = {
     1: {
@@ -400,17 +417,26 @@ function renderResults(data) {
 // Render single result item
 function renderResultItem(script, isRecommended, index) {
     const recommendedClass = isRecommended ? 'recommended' : '';
-    const tagText = isRecommended ? '推荐' : script.style;
 
     return `
         <div class="result-item ${recommendedClass}" onclick="toggleResultCard(this)">
-            <div class="result-header">
-                <div class="result-title">
+            <div class="script-header">
+                <div class="script-meta">
                     ${isRecommended ? '<span class="tag">推荐</span>' : ''}
                     <span class="style-name">${script.style}</span>
                     <span class="score">${script.score}分</span>
                 </div>
-                <span class="toggle-icon">▼</span>
+                <div class="quick-actions">
+                    <button onclick="event.stopPropagation(); rewriteScript(this, ${index}, '强化转化')">🔥 强化</button>
+                    <button onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更口语')">😂 口语</button>
+                    <button onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更理性')">🧠 理性</button>
+                    <button onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更简短')">✂️ 精简</button>
+                </div>
+            </div>
+            <div class="result-header">
+                <div class="result-title">
+                    <span class="toggle-icon">▼</span>
+                </div>
             </div>
             <div class="result-content">
                 <div class="script-part">
@@ -455,12 +481,6 @@ function renderResultItem(script, isRecommended, index) {
                     <button class="btn-secondary" onclick="event.stopPropagation(); exportScripts('txt')">导出TXT</button>
                     <button class="btn-secondary" onclick="event.stopPropagation(); exportScripts('md')">导出MD</button>
                 ` : ''}
-            </div>
-            <div class="rewrite-footer">
-                <button class="rewrite-btn" onclick="event.stopPropagation(); rewriteScript(this, ${index}, '强化转化')">🔥 强化转化</button>
-                <button class="rewrite-btn" onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更口语')">😂 更口语</button>
-                <button class="rewrite-btn" onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更理性')">🧠 更理性</button>
-                <button class="rewrite-btn" onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更简短')">✂️ 更简短</button>
             </div>
         </div>
     `;
