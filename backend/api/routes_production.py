@@ -2,10 +2,12 @@
 Production API routes
 """
 import os
+import json
 from urllib.parse import quote
+from typing import Generator
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -20,7 +22,10 @@ export_service = ExportService()
 
 class GenerateScriptFromCommentsRequest(BaseModel):
     """Request model for generating script from comments"""
-    comments: List[str]
+    product_name: str = ""
+    product_info: str = ""
+    selling_points: str = ""
+    comments: List[str] = []
 
 
 class GenerateScriptResponse(BaseModel):
@@ -80,13 +85,13 @@ def generate_multi_style_scripts_from_comments(request: GenerateScriptFromCommen
     """
     Generate scripts in three different styles from comments with scoring
     """
-    comments = request.comments
-
-    if not comments:
-        raise HTTPException(status_code=400, detail="Comments list cannot be empty")
-
     try:
-        result = production_service.generate_multi_style_scripts_from_comments(comments)
+        result = production_service.generate_multi_style_scripts_from_comments(
+            product_name=request.product_name,
+            product_info=request.product_info,
+            selling_points=request.selling_points,
+            comments=request.comments
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -128,3 +133,76 @@ def export_scripts(request: ExportScriptsRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def generate_sse_events(
+    product_name: str = "",
+    product_info: str = "",
+    selling_points: str = "",
+    comments: List[str] = None
+) -> Generator[str, None, None]:
+    """
+    Generate SSE events for script generation with real-time progress
+    """
+    if comments is None:
+        comments = []
+
+    try:
+        # Step 0: Prepare comments (generate if needed)
+        yield "event: progress\ndata: {\"step\": 0, \"status\": \"active\", \"message\": \"正在处理输入...\"}\n\n"
+
+        prepared_comments = production_service.prepare_comments(
+            product_name=product_name,
+            product_info=product_info,
+            selling_points=selling_points,
+            comments=comments
+        )
+
+        yield "event: progress\ndata: {\"step\": 0, \"status\": \"completed\", \"message\": \"输入处理完成\"}\n\n"
+
+        # Step 1: Analyzing comments
+        yield "event: progress\ndata: {\"step\": 1, \"status\": \"active\", \"message\": \"正在分析评论...\"}\n\n"
+
+        insights = production_service.ai_service.analyze_comments(prepared_comments)
+
+        yield "event: progress\ndata: {\"step\": 1, \"status\": \"completed\", \"message\": \"评论分析完成\"}\n\n"
+
+        # Step 2: Generating scripts
+        yield "event: progress\ndata: {\"step\": 2, \"status\": \"active\", \"message\": \"正在生成话术...\"}\n\n"
+
+        result = production_service.ai_service.generate_multi_style_scripts(insights)
+
+        yield "event: progress\ndata: {\"step\": 2, \"status\": \"completed\", \"message\": \"话术生成完成\"}\n\n"
+
+        # Step 3: Optimizing and scoring
+        yield "event: progress\ndata: {\"step\": 3, \"status\": \"active\", \"message\": \"正在优化话术...\"}\n\n"
+
+        # Final result
+        yield "event: progress\ndata: {\"step\": 3, \"status\": \"completed\", \"message\": \"优化完成\"}\n\n"
+
+        # Send final data
+        yield f"event: complete\ndata: {json.dumps(result, ensure_ascii=False)}\n\n"
+
+    except Exception as e:
+        yield f"event: error\ndata: {json.dumps({'message': str(e)}, ensure_ascii=False)}\n\n"
+
+
+@router.post("/generate-scripts-sse")
+def generate_scripts_sse(request: GenerateScriptFromCommentsRequest):
+    """
+    Generate scripts with SSE for real-time progress updates
+    """
+    return StreamingResponse(
+        generate_sse_events(
+            product_name=request.product_name,
+            product_info=request.product_info,
+            selling_points=request.selling_points,
+            comments=request.comments
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )

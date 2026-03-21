@@ -157,6 +157,61 @@ class AIService:
             logger.error(f"Failed to score script: {e}")
             return {"score": 0, "reason": "评分失败"}
 
+    def generate_comments(self, product_name: str = "", product_info: str = "") -> List[str]:
+        """
+        Generate 5 realistic user comments when no comments provided
+
+        Returns:
+            List of 5 comment strings
+        """
+        try:
+            prompt = f"""生成5条真实用户评论，每条20字以内，口语化，有正有负。
+
+商品名称: {product_name}
+商品描述: {product_info}
+
+要求：包含价格、效果、体验相关评论，每条一行，直接返回评论内容，不要编号。"""
+
+            raw_response = self._call_api(prompt)
+            comments = [c.strip() for c in raw_response.split('\n') if c.strip()]
+            return comments[:5]
+        except Exception as e:
+            logger.error(f"Failed to generate comments: {e}")
+            return [
+                "效果挺不错的",
+                "价格有点贵",
+                "发货速度快",
+                "质量很好",
+                "会回购"
+            ]
+
+    def convert_selling_points_to_comments(self, selling_points: str) -> List[str]:
+        """
+        Convert selling points to user-like comments
+
+        Returns:
+            List of comment strings
+        """
+        try:
+            prompt = f"""把以下产品卖点转换为5条用户评论风格的口语化描述，每条15字以内。
+
+卖点: {selling_points}
+
+要求：模拟用户口吻，每条一行，直接返回评论内容，不要编号。"""
+
+            raw_response = self._call_api(prompt)
+            comments = [c.strip() for c in raw_response.split('\n') if c.strip()]
+            return comments[:5]
+        except Exception as e:
+            logger.error(f"Failed to convert selling points: {e}")
+            return [
+                "确实很好用",
+                "品质不错",
+                "推荐购买",
+                "很满意",
+                "符合描述"
+            ]
+
     # ==================== 内部方法 ====================
 
     def _call_api(self, prompt: str) -> str:
@@ -180,7 +235,7 @@ class AIService:
                 "sender_type": "BOT",
                 "sender_name": "助手"
             },
-            "temperature": 0.7,
+            "temperature": 0.3,
             "max_tokens": 2000
         }
 

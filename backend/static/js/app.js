@@ -7,21 +7,25 @@ const examples = {
     1: {
         name: '美白精华液',
         info: '主打美白提亮，28天见效',
+        selling_points: '美白提亮，28天见效，温和不刺激',
         comments: ['用了皮肤确实变白了', '就是价格有点贵', '包装很高大上', '用了一周效果不明显', '会回购的']
     },
     2: {
         name: '无线蓝牙耳机',
         info: '降噪功能，续航30小时',
+        selling_points: '主动降噪，30小时续航，Hi-Fi音质',
         comments: ['音质真的很不错', '电池续航一般般', '操作很简单', '比实体店便宜', '售后态度很好']
     },
     3: {
         name: '零食大礼包',
         info: '多种口味，休闲零食组合',
+        selling_points: '多种口味，独立包装，性价比高',
         comments: ['味道超级好吃', '保质期太短了', '回购第三次了', '物流有点慢', '性价比很高']
     },
     4: {
         name: '纯棉T恤',
         info: '100%纯棉，舒适透气',
+        selling_points: '100%纯棉，舒适透气，多色可选',
         comments: ['穿起来很舒服', '尺码偏小', '款式好看', '质量一般', '客服很耐心']
     }
 };
@@ -32,6 +36,7 @@ function loadExample(type) {
     if (example) {
         document.getElementById('product-name').value = example.name;
         document.getElementById('product-info').value = example.info;
+        document.getElementById('selling-points').value = example.selling_points || '';
         document.getElementById('comments').value = example.comments.join('\n');
     }
 }
@@ -183,6 +188,9 @@ function updateProgressStep(stepNum, status) {
 
 // Generate scripts with SSE
 async function generateScripts() {
+    const productName = document.getElementById('product-name').value.trim();
+    const productInfo = document.getElementById('product-info').value.trim();
+    const sellingPoints = document.getElementById('selling-points').value.trim();
     const commentsText = document.getElementById('comments').value;
     const btn = document.getElementById('generate-btn');
     const emptyState = document.getElementById('empty-state');
@@ -190,11 +198,12 @@ async function generateScripts() {
     const errorEl = document.getElementById('error');
     const resultsContent = document.getElementById('results-content');
 
-    // Validate
+    // Parse comments
     const comments = commentsText.split('\n').map(c => c.trim()).filter(c => c);
 
-    if (comments.length === 0) {
-        errorEl.textContent = '请输入评论内容';
+    // Validate - at least one input required
+    if (!productName && !sellingPoints && comments.length === 0) {
+        errorEl.textContent = '请输入商品名称、卖点或评论至少一项';
         errorEl.style.display = 'block';
         emptyState.style.display = 'none';
         loadingEl.style.display = 'none';
@@ -219,7 +228,12 @@ async function generateScripts() {
         const response = await fetch('/api/generate-scripts-sse', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ comments: comments })
+            body: JSON.stringify({
+                product_name: productName,
+                product_info: productInfo,
+                selling_points: sellingPoints,
+                comments: comments
+            })
         });
 
         const reader = response.body.getReader();
