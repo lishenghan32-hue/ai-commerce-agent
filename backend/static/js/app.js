@@ -283,14 +283,15 @@ async function generateScripts() {
     if (!productName && !sellingPoints && !productUrl && comments.length === 0) {
         errorEl.textContent = '请输入商品链接、名称、卖点或评论至少一项';
         errorEl.style.display = 'block';
-        emptyState.style.display = 'none';
+        // Keep empty state visible for guidance
+        emptyState.style.display = 'flex';
         loadingEl.style.display = 'none';
         streamingEl.style.display = 'none';
         resultsContent.style.display = 'none';
         return;
     }
 
-    // Show streaming state
+    // Show streaming state - hide empty state
     btn.disabled = true;
     btn.textContent = '🚀 正在生成话术（实时输出中...）';
     emptyState.style.display = 'none';
@@ -306,7 +307,6 @@ async function generateScripts() {
     updateProgressStep(3, '');
 
     // Streaming state variables
-    let currentSection = null;
     let currentField = null;
 
     try {
@@ -336,36 +336,38 @@ async function generateScripts() {
             const lines = buffer.split('\n');
             buffer = lines.pop() || '';
 
-            for (const line of lines) {
+            // Process pairs of event + data
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
                 if (line.startsWith('event: ')) {
                     const eventType = line.slice(7);
-                    // Find corresponding data line
-                    const dataIndex = lines.indexOf(line) + 1;
-                    if (dataIndex < lines.length && lines[dataIndex].startsWith('data: ')) {
-                        const data = JSON.parse(lines[dataIndex].slice(6));
+                    const nextLine = lines[i + 1];
+                    if (nextLine && nextLine.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(nextLine.slice(6));
 
-                        if (eventType === 'progress') {
-                            updateProgressStep(data.step, data.status);
-                        } else if (eventType === 'section') {
-                            // Create new section
-                            currentSection = createStreamingSection(data.label, data.field);
-                            currentField = data.field;
-                            streamingContent.appendChild(currentSection.element);
-                            // Auto scroll
-                            streamingEl.scrollTop = streamingEl.scrollHeight;
-                        } else if (eventType === 'chunk') {
-                            // Append chunk to current section with typewriter effect
-                            if (currentSection) {
-                                appendChunk(currentSection, data.content);
-                                // Auto scroll
+                            if (eventType === 'progress') {
+                                updateProgressStep(data.step, data.status);
+                            } else if (eventType === 'section') {
+                                // Create new section
+                                currentSection = createStreamingSection(data.label, data.field);
+                                streamingContent.appendChild(currentSection.element);
                                 streamingEl.scrollTop = streamingEl.scrollHeight;
+                            } else if (eventType === 'chunk') {
+                                // Append chunk to current section
+                                if (currentSection) {
+                                    appendChunk(currentSection, data.content);
+                                    streamingEl.scrollTop = streamingEl.scrollHeight;
+                                }
+                            } else if (eventType === 'complete') {
+                                window.latestResult = data;
+                                streamingEl.style.display = 'none';
+                                renderResults(data);
+                            } else if (eventType === 'error') {
+                                throw new Error(data.message || '生成失败');
                             }
-                        } else if (eventType === 'complete') {
-                            window.latestResult = data;
-                            streamingEl.style.display = 'none';
-                            renderResults(data);
-                        } else if (eventType === 'error') {
-                            throw new Error(data.message || '生成失败');
+                        } catch (e) {
+                            console.error('Parse error:', e);
                         }
                     }
                 }
