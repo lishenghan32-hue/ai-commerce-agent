@@ -76,7 +76,7 @@
                 <div class="card result-card">
                     <div class="card-header">
                         <h2>生成结果</h2>
-                        <p class="card-hint">点击卡片展开查看详情</p>
+                        <p class="card-hint">AI 正在实时生成中...</p>
                     </div>
 
                     <!-- Empty State -->
@@ -86,7 +86,12 @@
                         <p class="empty-hint">AI 将为您生成直播话术</p>
                     </div>
 
-                    <!-- Loading State -->
+                    <!-- Streaming State -->
+                    <div id="streaming" class="streaming-container" style="display: none;">
+                        <div id="streamingContent" class="streaming-content"></div>
+                    </div>
+
+                    <!-- Loading State (Backup) -->
                     <div id="loading" class="loading-state" style="display: none;">
                         <div class="progress-steps">
                             <div class="step" id="step-1">

@@ -145,7 +145,7 @@ def generate_sse_events(
     comments: List[str] = None
 ) -> Generator[str, None, None]:
     """
-    Generate SSE events for script generation with real-time progress
+    Generate SSE events for script generation with real-time streaming
     """
     if comments is None:
         comments = []
@@ -195,20 +195,39 @@ def generate_sse_events(
 
         yield "event: progress\ndata: {\"step\": 1, \"status\": \"completed\", \"message\": \"评论分析完成\"}\n\n"
 
-        # Step 2: Generating scripts
+        # Step 2: Generating scripts with streaming
         yield "event: progress\ndata: {\"step\": 2, \"status\": \"active\", \"message\": \"正在生成话术...\"}\n\n"
 
+        # Stream the best script content
         result = production_service.ai_service.generate_multi_style_scripts(insights)
+
+        if result.get("best_script"):
+            script = result["best_script"]
+            # Stream each section
+            for field, label in [
+                ("opening_hook", "开头吸引"),
+                ("pain_point", "痛点描述"),
+                ("solution", "解决方案"),
+                ("proof", "证明案例"),
+                ("offer", "促单话术")
+            ]:
+                content = script.get(field, "")
+                if content:
+                    yield f"event: section\ndata: {json.dumps({'label': label, 'field': field}, ensure_ascii=False)}\n\n"
+                    # Stream content in chunks
+                    chunk_size = 10
+                    for i in range(0, len(content), chunk_size):
+                        chunk = content[i:i+chunk_size]
+                        yield f"event: chunk\ndata: {json.dumps({'content': chunk, 'field': field}, ensure_ascii=False)}\n\n"
 
         yield "event: progress\ndata: {\"step\": 2, \"status\": \"completed\", \"message\": \"话术生成完成\"}\n\n"
 
-        # Step 3: Optimizing and scoring
-        yield "event: progress\ndata: {\"step\": 3, \"status\": \"active\", \"message\": \"正在优化话术...\"}\n\n"
+        # Step 3: Scoring
+        yield "event: progress\ndata: {\"step\": 3, \"status\": \"active\", \"message\": \"正在评分...\"}\n\n"
 
-        # Final result
-        yield "event: progress\ndata: {\"step\": 3, \"status\": \"completed\", \"message\": \"优化完成\"}\n\n"
+        yield "event: progress\ndata: {\"step\": 3, \"status\": \"completed\", \"message\": \"评分完成\"}\n\n"
 
-        # Send final data
+        # Send final complete data
         yield f"event: complete\ndata: {json.dumps(result, ensure_ascii=False)}\n\n"
 
     except Exception as e:

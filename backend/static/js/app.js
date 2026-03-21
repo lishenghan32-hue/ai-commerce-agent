@@ -271,6 +271,8 @@ async function generateScripts() {
     const btn = document.getElementById('generate-btn');
     const emptyState = document.getElementById('empty-state');
     const loadingEl = document.getElementById('loading');
+    const streamingEl = document.getElementById('streaming');
+    const streamingContent = document.getElementById('streamingContent');
     const errorEl = document.getElementById('error');
     const resultsContent = document.getElementById('results-content');
 
@@ -283,22 +285,29 @@ async function generateScripts() {
         errorEl.style.display = 'block';
         emptyState.style.display = 'none';
         loadingEl.style.display = 'none';
+        streamingEl.style.display = 'none';
         resultsContent.style.display = 'none';
         return;
     }
 
-    // Show loading state
+    // Show streaming state
     btn.disabled = true;
-    btn.textContent = '生成中...';
+    btn.textContent = '🚀 正在生成话术（实时输出中...）';
     emptyState.style.display = 'none';
     errorEl.style.display = 'none';
     resultsContent.style.display = 'none';
-    loadingEl.style.display = 'block';
+    loadingEl.style.display = 'none';
+    streamingEl.style.display = 'block';
+    streamingContent.innerHTML = '';
 
     // Reset progress steps
     updateProgressStep(1, '');
     updateProgressStep(2, '');
     updateProgressStep(3, '');
+
+    // Streaming state variables
+    let currentSection = null;
+    let currentField = null;
 
     try {
         const response = await fetch('/api/generate-scripts-sse', {
@@ -337,9 +346,23 @@ async function generateScripts() {
 
                         if (eventType === 'progress') {
                             updateProgressStep(data.step, data.status);
+                        } else if (eventType === 'section') {
+                            // Create new section
+                            currentSection = createStreamingSection(data.label, data.field);
+                            currentField = data.field;
+                            streamingContent.appendChild(currentSection.element);
+                            // Auto scroll
+                            streamingEl.scrollTop = streamingEl.scrollHeight;
+                        } else if (eventType === 'chunk') {
+                            // Append chunk to current section with typewriter effect
+                            if (currentSection) {
+                                appendChunk(currentSection, data.content);
+                                // Auto scroll
+                                streamingEl.scrollTop = streamingEl.scrollHeight;
+                            }
                         } else if (eventType === 'complete') {
                             window.latestResult = data;
-                            loadingEl.style.display = 'none';
+                            streamingEl.style.display = 'none';
                             renderResults(data);
                         } else if (eventType === 'error') {
                             throw new Error(data.message || '生成失败');
@@ -351,7 +374,7 @@ async function generateScripts() {
 
     } catch (error) {
         console.error('Error:', error);
-        loadingEl.style.display = 'none';
+        streamingEl.style.display = 'none';
         errorEl.textContent = '生成失败: ' + error.message;
         errorEl.style.display = 'block';
     } finally {
@@ -360,12 +383,53 @@ async function generateScripts() {
     }
 }
 
+// Create streaming section element
+function createStreamingSection(label, field) {
+    const element = document.createElement('div');
+    element.className = 'streaming-section';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'streaming-section-label';
+    labelEl.textContent = label;
+
+    const textEl = document.createElement('div');
+    textEl.className = 'streaming-text';
+
+    const cursor = document.createElement('span');
+    cursor.className = 'streaming-cursor';
+
+    textEl.appendChild(cursor);
+    element.appendChild(labelEl);
+    element.appendChild(textEl);
+
+    return {
+        element: element,
+        textEl: textEl,
+        cursor: cursor,
+        field: field
+    };
+}
+
+// Append chunk with typewriter effect
+function appendChunk(section, chunk) {
+    // Remove cursor temporarily
+    section.cursor.remove();
+
+    // Add new content
+    section.textEl.textContent += chunk;
+
+    // Add cursor back
+    section.textEl.appendChild(section.cursor);
+}
+
 // Render results with streaming effect
 function renderResults(data) {
     const loadingEl = document.getElementById('loading');
+    const streamingEl = document.getElementById('streaming');
     const resultsContent = document.getElementById('results-content');
 
     loadingEl.style.display = 'none';
+    streamingEl.style.display = 'none';
     resultsContent.style.display = 'flex';
     resultsContent.innerHTML = '';
 
