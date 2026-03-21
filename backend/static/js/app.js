@@ -176,7 +176,9 @@ function updateProgressStep(stepNum, status) {
     if (!step) return;
 
     step.classList.remove('active', 'completed');
-    step.classList.add(status);
+    if (status) {
+        step.classList.add(status);
+    }
 }
 
 // Generate scripts
@@ -213,12 +215,8 @@ async function generateScripts() {
     updateProgressStep(2, '');
     updateProgressStep(3, '');
 
-    // Animate progress
-    setTimeout(() => updateProgressStep(1, 'active'), 100);
-    setTimeout(() => updateProgressStep(1, 'completed'), 1200);
-    setTimeout(() => updateProgressStep(2, 'active'), 1300);
-    setTimeout(() => updateProgressStep(2, 'completed'), 2500);
-    setTimeout(() => updateProgressStep(3, 'active'), 2600);
+    // Animate progress - show first step immediately
+    updateProgressStep(1, 'active');
 
     try {
         const response = await fetch('/api/generate-multi-style-scripts-from-comments', {
@@ -233,16 +231,16 @@ async function generateScripts() {
             throw new Error(data.detail || '请求失败');
         }
 
-        // Complete final step
+        // Complete progress and render immediately
+        updateProgressStep(1, 'completed');
+        updateProgressStep(2, 'completed');
         updateProgressStep(3, 'completed');
 
         // Store result
         window.latestResult = data;
 
-        // Render results
-        setTimeout(() => {
-            renderResults(data);
-        }, 500);
+        // Render results immediately
+        renderResults(data);
 
     } catch (error) {
         console.error('Error:', error);
