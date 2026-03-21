@@ -127,6 +127,12 @@ body {
     margin-bottom: 8px;
 }
 
+.form-group label .optional {
+    font-weight: 400;
+    color: #999;
+    font-size: 12px;
+}
+
 .form-group input,
 .form-group textarea {
     width: 100%;

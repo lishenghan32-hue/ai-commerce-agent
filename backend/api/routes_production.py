@@ -22,6 +22,7 @@ export_service = ExportService()
 
 class GenerateScriptFromCommentsRequest(BaseModel):
     """Request model for generating script from comments"""
+    product_url: str = ""
     product_name: str = ""
     product_info: str = ""
     selling_points: str = ""
@@ -87,6 +88,7 @@ def generate_multi_style_scripts_from_comments(request: GenerateScriptFromCommen
     """
     try:
         result = production_service.generate_multi_style_scripts_from_comments(
+            product_url=request.product_url,
             product_name=request.product_name,
             product_info=request.product_info,
             selling_points=request.selling_points,
@@ -136,6 +138,7 @@ def export_scripts(request: ExportScriptsRequest):
 
 
 def generate_sse_events(
+    product_url: str = "",
     product_name: str = "",
     product_info: str = "",
     selling_points: str = "",
@@ -147,9 +150,27 @@ def generate_sse_events(
     if comments is None:
         comments = []
 
+    import logging
+    logger = logging.getLogger(__name__)
+
     try:
-        # Step 0: Prepare comments (generate if needed)
+        # Step 0: Extract info from URL if provided
         yield "event: progress\ndata: {\"step\": 0, \"status\": \"active\", \"message\": \"正在处理输入...\"}\n\n"
+
+        if product_url:
+            ai_info = production_service.ai_service.extract_product_info_from_url(product_url)
+            logger.info(f"URL提取信息: {ai_info}")
+
+            if not product_name:
+                product_name = ai_info.get("product_name", "")
+
+            if not selling_points:
+                selling_points = ", ".join(ai_info.get("selling_points", []))
+
+            if not comments or len(comments) < 3:
+                ai_comments = ai_info.get("comments", [])
+                if ai_comments:
+                    comments = list(comments) + ai_comments if comments else ai_comments
 
         prepared_comments = production_service.prepare_comments(
             product_name=product_name,
@@ -157,6 +178,13 @@ def generate_sse_events(
             selling_points=selling_points,
             comments=comments
         )
+
+        logger.info(f"最终商品名: {product_name}")
+        logger.info(f"最终卖点: {selling_points}")
+        logger.info(f"最终评论: {prepared_comments}")
+
+        if not prepared_comments:
+            prepared_comments = production_service.ai_service.generate_comments(product_name, product_info)
 
         yield "event: progress\ndata: {\"step\": 0, \"status\": \"completed\", \"message\": \"输入处理完成\"}\n\n"
 
@@ -194,6 +222,7 @@ def generate_scripts_sse(request: GenerateScriptFromCommentsRequest):
     """
     return StreamingResponse(
         generate_sse_events(
+            product_url=request.product_url,
             product_name=request.product_name,
             product_info=request.product_info,
             selling_points=request.selling_points,

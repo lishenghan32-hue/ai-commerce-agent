@@ -86,6 +86,7 @@ class ProductionService:
 
     def generate_multi_style_scripts_from_comments(
         self,
+        product_url: str = "",
         product_name: str = "",
         product_info: str = "",
         selling_points: str = "",
@@ -95,6 +96,7 @@ class ProductionService:
         Generate scripts in three different styles from comments
 
         Args:
+            product_url: Product URL (optional)
             product_name: Product name
             product_info: Product description
             selling_points: Product selling points
@@ -106,7 +108,27 @@ class ProductionService:
         Raises:
             Exception: If any step fails
         """
-        # Prepare comments
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Step 1: Extract info from URL if provided
+        if product_url:
+            ai_info = self.ai_service.extract_product_info_from_url(product_url)
+            logger.info(f"URL提取信息: {ai_info}")
+
+            # User input has highest priority
+            if not product_name:
+                product_name = ai_info.get("product_name", "")
+
+            if not selling_points:
+                selling_points = ", ".join(ai_info.get("selling_points", []))
+
+            if not comments or len(comments) < 3:
+                ai_comments = ai_info.get("comments", [])
+                if ai_comments:
+                    comments = list(comments) + ai_comments if comments else ai_comments
+
+        # Step 2: Prepare comments through unified logic
         prepared_comments = self.prepare_comments(
             product_name=product_name,
             product_info=product_info,
@@ -114,10 +136,19 @@ class ProductionService:
             comments=comments
         )
 
-        # Step 1: Analyze comments to get insights
+        # Debug logging
+        logger.info(f"最终商品名: {product_name}")
+        logger.info(f"最终卖点: {selling_points}")
+        logger.info(f"最终评论: {prepared_comments}")
+
+        # If comments still empty, force generate
+        if not prepared_comments:
+            prepared_comments = self.ai_service.generate_comments(product_name, product_info)
+
+        # Step 3: Analyze comments to get insights
         insights = self.ai_service.analyze_comments(prepared_comments)
 
-        # Step 2: Generate multi-style scripts from insights
+        # Step 4: Generate multi-style scripts from insights
         result = self.ai_service.generate_multi_style_scripts(insights)
 
         return result

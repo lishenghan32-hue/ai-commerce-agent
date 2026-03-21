@@ -19,6 +19,68 @@ class AIService:
         self.base_url = "https://api.minimax.chat/v1/text/chatcompletion_pro"
         self.model = "abab5.5-chat"
 
+    def extract_product_info_from_url(self, product_url: str) -> Dict[str, Any]:
+        """
+        Extract product info from URL using AI inference
+
+        Args:
+            product_url: Product URL (can be any e-commerce link)
+
+        Returns:
+            Dict with product_name, selling_points, comments
+        """
+        if not product_url:
+            return self._default_product_info()
+
+        try:
+            prompt = self._build_url_extract_prompt(product_url)
+            raw_response = self._call_api(prompt)
+            json_response = self._extract_json_with_llm(raw_response)
+
+            parsed = json.loads(json_response)
+            return {
+                "product_name": parsed.get("product_name") or "",
+                "selling_points": parsed.get("selling_points") or [],
+                "comments": parsed.get("comments") or []
+            }
+        except Exception as e:
+            logger.error(f"Failed to extract product info from URL: {e}")
+            return self._default_product_info()
+
+    def _build_url_extract_prompt(self, product_url: str) -> str:
+        """Build prompt for extracting product info from URL"""
+        prompt = f"""这是一个电商商品链接：
+
+{product_url}
+
+请你推测该商品的信息，并返回 JSON 格式：
+
+{{
+    "product_name": "",
+    "selling_points": ["", "", ""],
+    "comments": ["", "", "", "", ""]
+}}
+
+要求：
+1. 商品名称要具体（不要泛泛）
+2. 卖点要像电商卖点（功能+人群+场景）
+3. 评论必须口语化（像真实用户）
+4. 评论要有正有负（不要全是好评）
+5. 至少包含：使用体验、效果反馈、价格/性价比感受
+6. 每条评论一句话，不要太长
+7. 不要解释，只返回JSON
+
+只返回JSON。"""
+        return prompt
+
+    def _default_product_info(self) -> Dict[str, Any]:
+        """Return default product info"""
+        return {
+            "product_name": "未知商品",
+            "selling_points": [],
+            "comments": []
+        }
+
     def analyze_comments(self, comments: List[str]) -> Dict[str, Any]:
         """
         Analyze comments to extract user insights using LLM

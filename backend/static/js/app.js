@@ -246,6 +246,7 @@ function updateProgressStep(stepNum, status) {
 
 // Generate scripts with SSE
 async function generateScripts() {
+    const productUrl = document.getElementById('product-url').value.trim();
     const productName = document.getElementById('product-name').value.trim();
     const productInfo = document.getElementById('product-info').value.trim();
     const sellingPoints = document.getElementById('selling-points').value.trim();
@@ -259,9 +260,9 @@ async function generateScripts() {
     // Parse comments
     const comments = commentsText.split('\n').map(c => c.trim()).filter(c => c);
 
-    // Validate - at least one input required
-    if (!productName && !sellingPoints && comments.length === 0) {
-        errorEl.textContent = '请输入商品名称、卖点或评论至少一项';
+    // Validate - at least one input required (including URL)
+    if (!productName && !sellingPoints && !productUrl && comments.length === 0) {
+        errorEl.textContent = '请输入商品链接、名称、卖点或评论至少一项';
         errorEl.style.display = 'block';
         emptyState.style.display = 'none';
         loadingEl.style.display = 'none';
@@ -287,6 +288,7 @@ async function generateScripts() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                product_url: productUrl,
                 product_name: productName,
                 product_info: productInfo,
                 selling_points: sellingPoints,
