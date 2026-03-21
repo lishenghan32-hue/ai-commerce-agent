@@ -677,3 +677,163 @@ offer:
 只返回JSON。"""
 
         return prompt
+
+    def rewrite_script(self, script: Dict[str, Any], mode: str) -> Dict[str, Any]:
+        """
+        Rewrite script based on mode
+
+        Args:
+            script: Original script dict
+            mode: One of "强化转化", "更口语", "更理性", "更简短"
+
+        Returns:
+            Dict with rewritten script content
+        """
+        if not script:
+            return self._default_script()
+
+        prompt = self._build_rewrite_prompt(script, mode)
+
+        try:
+            raw_response = self._call_api(prompt)
+            json_response = self._extract_json_with_llm(raw_response)
+
+            parsed = json.loads(json_response)
+            return {
+                "opening_hook": parsed.get("opening_hook") or "",
+                "pain_point": parsed.get("pain_point") or "",
+                "solution": parsed.get("solution") or "",
+                "proof": parsed.get("proof") or "",
+                "offer": parsed.get("offer") or ""
+            }
+        except Exception as e:
+            logger.error(f"Failed to rewrite script: {e}")
+            return script
+
+    def _build_rewrite_prompt(self, script: Dict[str, Any], mode: str) -> str:
+        """Build prompt for script rewriting based on mode"""
+
+        base_script = f"""当前话术：
+- 开头吸引: {script.get('opening_hook', '')}
+- 痛点: {script.get('pain_point', '')}
+- 解决方案: {script.get('solution', '')}
+- 证明: {script.get('proof', '')}
+- 促单: {script.get('offer', '')}"""
+
+        if mode == "强化转化":
+            prompt = f"""你是一名抖音/直播带货主播，擅长优化话术提升转化率。
+你的任务是：将现有话术进行"强化转化"改写，让它更具销售力。
+
+{base_script}
+
+请返回JSON格式:
+{{
+    "opening_hook": "",
+    "pain_point": "",
+    "solution": "",
+    "proof": "",
+    "offer": ""
+}}
+
+【强化转化要求】：
+1. 增强情绪感染力，让用户更激动
+2. 加强催单感，增加紧迫感
+3. 使用倒计时、库存紧张、限时限量等手段
+4. 每一句都要有"必须马上买"的感觉
+5. 口语化，像主播在喊麦
+
+示例风格：
+"最后50单！抢完恢复原价！"
+"家人们，手慢无啊！"
+"今天这价格，只给到你们！"
+
+只返回JSON。"""
+
+        elif mode == "更口语":
+            prompt = f"""你是一名抖音/直播带货主播，擅长用自然口语风格说话。
+你的任务是：将现有话术改写得更自然、更像真人说话。
+
+{base_script}
+
+请返回JSON格式:
+{{
+    "opening_hook": "",
+    "pain_point": "",
+    "solution": "",
+    "proof": "",
+    "offer": ""
+}}
+
+【更口语要求】：
+1. 像朋友聊天一样自然
+2. 减少书面语词汇
+3. 增加语气词和感叹
+4. 让用户感觉在跟真人对话
+5. 减少生硬的推销感
+
+示例风格：
+"我跟你说啊..."
+"真的，我跟你讲..."
+"你试试就知道了..."
+
+只返回JSON。"""
+
+        elif mode == "更理性":
+            prompt = f"""你是一名抖音/直播带货主播，擅长用理性分析说服用户。
+你的任务是：将现有话术改写得更有逻辑、更有说服力。
+
+{base_script}
+
+请返回JSON格式:
+{{
+    "opening_hook": "",
+    "pain_point": "",
+    "solution": "",
+    "proof": "",
+    "offer": ""
+}}
+
+【更理性要求】：
+1. 增加数据支撑和证据
+2. 增加对比分析
+3. 讲原理、讲逻辑
+4. 消除用户理性顾虑
+5. 让人"想清楚"后下单
+
+示例风格：
+"我帮你算一笔账..."
+"从科学角度来说..."
+"根据数据显示..."
+
+只返回JSON。"""
+
+        else:  # 更简短
+            prompt = f"""你是一名抖音/直播带货主播，擅长用简洁有力的话术。
+你的任务是：将现有话术精简为最核心的内容。
+
+{base_script}
+
+请返回JSON格式:
+{{
+    "opening_hook": "",
+    "pain_point": "",
+    "solution": "",
+    "proof": "",
+    "offer": ""
+}}
+
+【更简短要求】：
+1. 每一句控制在10个字以内
+2. 删除冗余描述
+3. 保留最核心卖点
+4. 保持口语化
+5. 去掉废话，直击重点
+
+示例风格：
+"效果好"
+"便宜"
+"快抢"
+
+只返回JSON。"""
+
+        return prompt

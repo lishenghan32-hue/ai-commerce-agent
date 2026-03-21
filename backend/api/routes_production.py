@@ -206,3 +206,24 @@ def generate_scripts_sse(request: GenerateScriptFromCommentsRequest):
             "X-Accel-Buffering": "no"
         }
     )
+
+
+class RewriteScriptRequest(BaseModel):
+    """Request model for rewriting script"""
+    script: ScriptWithStyle
+    mode: str
+
+
+@router.post("/rewrite-script")
+def rewrite_script(request: RewriteScriptRequest):
+    """
+    Rewrite existing script based on mode
+    """
+    try:
+        result = production_service.rewrite_script(
+            script=request.script.model_dump(),
+            mode=request.mode
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

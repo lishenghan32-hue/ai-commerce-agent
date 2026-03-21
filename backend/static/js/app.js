@@ -175,6 +175,64 @@ async function copyFullScript(btn, index) {
     }
 }
 
+// Rewrite script
+async function rewriteScript(btn, index, mode) {
+    const script = window.latestResult?.scripts?.[index];
+    if (!script) return;
+
+    const originalText = btn.textContent;
+    btn.textContent = '改写中...';
+    btn.disabled = true;
+
+    // Disable all rewrite buttons in this card
+    const card = btn.closest('.result-item');
+    const allRewriteBtns = card.querySelectorAll('.rewrite-btn');
+    allRewriteBtns.forEach(b => b.disabled = true);
+
+    try {
+        const response = await fetch('/api/rewrite-script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                script: script,
+                mode: mode
+            })
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || '改写失败');
+        }
+
+        const rewritten = await response.json();
+
+        // Update the script in latestResult
+        window.latestResult.scripts[index] = {
+            ...window.latestResult.scripts[index],
+            ...rewritten
+        };
+
+        // Update best_script if this is the best
+        if (window.latestResult.best_script && window.latestResult.best_script.style === script.style) {
+            window.latestResult.best_script = {
+                ...window.latestResult.best_script,
+                ...rewritten
+            };
+        }
+
+        // Re-render the result card
+        const newHtml = renderResultItem(window.latestResult.scripts[index], window.latestResult.best_script && window.latestResult.best_script.style === script.style, index);
+        card.outerHTML = newHtml;
+
+    } catch (err) {
+        console.error('改写失败:', err);
+        alert('改写失败: ' + err.message);
+    } finally {
+        // Re-enable buttons
+        allRewriteBtns.forEach(b => b.disabled = false);
+    }
+}
+
 // Update progress steps
 function updateProgressStep(stepNum, status) {
     const step = document.getElementById(`step-${stepNum}`);
@@ -395,6 +453,12 @@ function renderResultItem(script, isRecommended, index) {
                     <button class="btn-secondary" onclick="event.stopPropagation(); exportScripts('txt')">导出TXT</button>
                     <button class="btn-secondary" onclick="event.stopPropagation(); exportScripts('md')">导出MD</button>
                 ` : ''}
+            </div>
+            <div class="rewrite-footer">
+                <button class="rewrite-btn" onclick="event.stopPropagation(); rewriteScript(this, ${index}, '强化转化')">🔥 强化转化</button>
+                <button class="rewrite-btn" onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更口语')">😂 更口语</button>
+                <button class="rewrite-btn" onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更理性')">🧠 更理性</button>
+                <button class="rewrite-btn" onclick="event.stopPropagation(); rewriteScript(this, ${index}, '更简短')">✂️ 更简短</button>
             </div>
         </div>
     `;

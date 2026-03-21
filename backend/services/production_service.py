@@ -121,3 +121,16 @@ class ProductionService:
         result = self.ai_service.generate_multi_style_scripts(insights)
 
         return result
+
+    def rewrite_script(self, script: Dict[str, Any], mode: str) -> Dict[str, Any]:
+        """
+        Rewrite script based on mode
+
+        Args:
+            script: Original script dict
+            mode: One of "强化转化", "更口语", "更理性", "更简短"
+
+        Returns:
+            Dict with rewritten script content
+        """
+        return self.ai_service.rewrite_script(script, mode)
