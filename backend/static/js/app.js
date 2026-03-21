@@ -181,7 +181,7 @@ function updateProgressStep(stepNum, status) {
     }
 }
 
-// Generate scripts
+// Generate scripts with SSE
 async function generateScripts() {
     const commentsText = document.getElementById('comments').value;
     const btn = document.getElementById('generate-btn');
@@ -210,42 +210,53 @@ async function generateScripts() {
     resultsContent.style.display = 'none';
     loadingEl.style.display = 'block';
 
-    // Reset and start progress animation
+    // Reset progress steps
     updateProgressStep(1, '');
     updateProgressStep(2, '');
     updateProgressStep(3, '');
 
-    // Animate progress steps sequentially
-    setTimeout(() => updateProgressStep(1, 'active'), 100);
-    setTimeout(() => updateProgressStep(2, 'active'), 500);
-    setTimeout(() => updateProgressStep(3, 'active'), 900);
-
     try {
-        const response = await fetch('/api/generate-multi-style-scripts-from-comments', {
+        const response = await fetch('/api/generate-scripts-sse', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ comments: comments })
         });
 
-        const data = await response.json();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-        if (!response.ok) {
-            throw new Error(data.detail || '请求失败');
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // Process complete events
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('event: ')) {
+                    const eventType = line.slice(7);
+                    // Find corresponding data line
+                    const dataIndex = lines.indexOf(line) + 1;
+                    if (dataIndex < lines.length && lines[dataIndex].startsWith('data: ')) {
+                        const data = JSON.parse(lines[dataIndex].slice(6));
+
+                        if (eventType === 'progress') {
+                            updateProgressStep(data.step, data.status);
+                        } else if (eventType === 'complete') {
+                            window.latestResult = data;
+                            loadingEl.style.display = 'none';
+                            renderResults(data);
+                        } else if (eventType === 'error') {
+                            throw new Error(data.message || '生成失败');
+                        }
+                    }
+                }
+            }
         }
-
-        // Complete all progress with animation
-        updateProgressStep(1, 'completed');
-        setTimeout(() => updateProgressStep(2, 'completed'), 200);
-        setTimeout(() => updateProgressStep(3, 'completed'), 400);
-
-        // Store result
-        window.latestResult = data;
-
-        // Hide loading and render results with slight delay for smooth transition
-        setTimeout(() => {
-            loadingEl.style.display = 'none';
-            renderResults(data);
-        }, 600);
 
     } catch (error) {
         console.error('Error:', error);
