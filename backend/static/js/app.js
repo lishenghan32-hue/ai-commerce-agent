@@ -210,13 +210,15 @@ async function generateScripts() {
     resultsContent.style.display = 'none';
     loadingEl.style.display = 'block';
 
-    // Reset progress steps
+    // Reset and start progress animation
     updateProgressStep(1, '');
     updateProgressStep(2, '');
     updateProgressStep(3, '');
 
-    // Animate progress - show first step immediately
-    updateProgressStep(1, 'active');
+    // Animate progress steps sequentially
+    setTimeout(() => updateProgressStep(1, 'active'), 100);
+    setTimeout(() => updateProgressStep(2, 'active'), 500);
+    setTimeout(() => updateProgressStep(3, 'active'), 900);
 
     try {
         const response = await fetch('/api/generate-multi-style-scripts-from-comments', {
@@ -231,16 +233,19 @@ async function generateScripts() {
             throw new Error(data.detail || '请求失败');
         }
 
-        // Complete progress and render immediately
+        // Complete all progress with animation
         updateProgressStep(1, 'completed');
-        updateProgressStep(2, 'completed');
-        updateProgressStep(3, 'completed');
+        setTimeout(() => updateProgressStep(2, 'completed'), 200);
+        setTimeout(() => updateProgressStep(3, 'completed'), 400);
 
         // Store result
         window.latestResult = data;
 
-        // Render results immediately
-        renderResults(data);
+        // Hide loading and render results with slight delay for smooth transition
+        setTimeout(() => {
+            loadingEl.style.display = 'none';
+            renderResults(data);
+        }, 600);
 
     } catch (error) {
         console.error('Error:', error);
@@ -286,19 +291,24 @@ function renderResults(data) {
             const html = renderResultItem(item.script, item.isRecommended, item.index);
             resultsContent.insertAdjacentHTML('beforeend', html);
 
-            // Auto expand the first item (recommended)
-            if (i === 0) {
-                const lastItem = resultsContent.lastElementChild;
-                if (lastItem) {
+            // Trigger animation
+            const lastItem = resultsContent.lastElementChild;
+            if (lastItem) {
+                // Force reflow
+                void lastItem.offsetWidth;
+                // Add expanded class for animation
+                if (i === 0) {
                     lastItem.classList.add('expanded');
                 }
             }
 
             // Scroll to result
             if (i === items.length - 1) {
-                resultsContent.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => {
+                    resultsContent.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 200);
             }
-        }, i * 300); // 300ms delay between each item
+        }, i * 200); // 200ms delay between each item
     });
 }
 

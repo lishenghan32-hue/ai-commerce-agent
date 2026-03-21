@@ -300,12 +300,21 @@ body {
     background: white;
     border-radius: 10px;
     border: 1px solid #eee;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.5;
+    transform: translateX(-10px);
+}
+
+.step.active,
+.step.completed {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 .step.active {
     border-color: #667eea;
     background: #f8f9ff;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
 .step.completed {
@@ -325,11 +334,14 @@ body {
     font-size: 12px;
     font-weight: 600;
     flex-shrink: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .step.active .step-icon {
     background: #667eea;
     color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
 }
 
 .step.completed .step-icon {
@@ -402,19 +414,19 @@ body {
     border: 1px solid #e5e5e5;
     overflow: hidden;
     transition: all 0.3s ease;
-    animation: slideIn 0.4s ease forwards;
+    animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px) scale(0.98);
 }
 
 @keyframes slideIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(20px) scale(0.98);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
@@ -492,13 +504,20 @@ body {
 
 /* Content */
 .result-content {
-    display: none;
-    padding: 0 20px 20px;
-    border-top: 1px solid #f0f0f0;
+    display: block;
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 20px;
+    border-top: 0 solid #f0f0f0;
+    opacity: 0;
+    transition: all 0.3s ease;
 }
 
 .result-item.expanded .result-content {
-    display: block;
+    max-height: 500px;
+    padding: 0 20px 20px;
+    border-top-width: 1px;
+    opacity: 1;
 }
 
 .script-part {
