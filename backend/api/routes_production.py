@@ -234,18 +234,27 @@ def generate_sse_events(
         yield f"event: error\ndata: {json.dumps({'message': str(e)}, ensure_ascii=False)}\n\n"
 
 
-@router.post("/generate-scripts-sse")
-def generate_scripts_sse(request: GenerateScriptFromCommentsRequest):
+@router.get("/generate-scripts-sse")
+def generate_scripts_sse(
+    product_url: str = "",
+    product_name: str = "",
+    product_info: str = "",
+    selling_points: str = "",
+    comments: str = "[]"
+):
     """
     Generate scripts with SSE for real-time progress updates
     """
+    import json
+    comment_list = json.loads(comments) if comments else []
+
     return StreamingResponse(
         generate_sse_events(
-            product_url=request.product_url,
-            product_name=request.product_name,
-            product_info=request.product_info,
-            selling_points=request.selling_points,
-            comments=request.comments
+            product_url=product_url,
+            product_name=product_name,
+            product_info=product_info,
+            selling_points=selling_points,
+            comments=comment_list
         ),
         media_type="text/event-stream",
         headers={

@@ -283,7 +283,6 @@ async function generateScripts() {
     if (!productName && !sellingPoints && !productUrl && comments.length === 0) {
         errorEl.textContent = '请输入商品链接、名称、卖点或评论至少一项';
         errorEl.style.display = 'block';
-        // Keep empty state visible for guidance
         emptyState.style.display = 'flex';
         loadingEl.style.display = 'none';
         streamingEl.style.display = 'none';
@@ -293,13 +292,51 @@ async function generateScripts() {
 
     // Show streaming state - hide empty state
     btn.disabled = true;
-    btn.textContent = '🚀 正在生成话术（实时输出中...）';
+    btn.textContent = '🚀 AI 正在生成中（约3秒）';
     emptyState.style.display = 'none';
     errorEl.style.display = 'none';
     resultsContent.style.display = 'none';
     loadingEl.style.display = 'none';
-    streamingEl.style.display = 'block';
-    streamingContent.innerHTML = '';
+    streamingEl.style.display = 'flex';
+
+    // 1. Show skeleton UI immediately
+    streamingContent.innerHTML = `
+        <div id="thinking-text" class="thinking-text">正在理解用户输入...</div>
+        <div class="fake-structure">
+            <div class="fake-block" data-field="opening_hook">
+                <span class="fake-label">开头吸引：</span><span class="shimmer"></span>
+            </div>
+            <div class="fake-block" data-field="pain_point">
+                <span class="fake-label">痛点描述：</span><span class="shimmer"></span>
+            </div>
+            <div class="fake-block" data-field="solution">
+                <span class="fake-label">解决方案：</span><span class="shimmer"></span>
+            </div>
+            <div class="fake-block" data-field="proof">
+                <span class="fake-label">证明案例：</span><span class="shimmer"></span>
+            </div>
+            <div class="fake-block" data-field="offer">
+                <span class="fake-label">促单话术：</span><span class="shimmer"></span>
+            </div>
+        </div>
+    `;
+
+    // 2. Start thinking text cycling
+    const thinkingSteps = [
+        "正在理解用户输入...",
+        "正在分析评论情绪...",
+        "正在提炼核心卖点...",
+        "正在构建话术结构...",
+        "正在优化表达..."
+    ];
+    let thinkingIndex = 0;
+    let thinkingEl = document.getElementById('thinking-text');
+    let thinkingTimer = setInterval(() => {
+        if (thinkingEl) {
+            thinkingEl.textContent = thinkingSteps[thinkingIndex % thinkingSteps.length];
+            thinkingIndex++;
+        }
+    }, 1200);
 
     // Reset progress steps
     updateProgressStep(1, '');
@@ -308,81 +345,146 @@ async function generateScripts() {
 
     // Streaming state variables
     let currentField = null;
+    let currentSection = null;
+    let accumulatedContent = {};
+    let isCompleted = false;
 
-    try {
-        const response = await fetch('/api/generate-scripts-sse', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                product_url: productUrl,
-                product_name: productName,
-                product_info: productInfo,
-                selling_points: sellingPoints,
-                comments: comments
-            })
-        });
+    // 3. Use EventSource for true SSE
+    const params = new URLSearchParams({
+        product_url: productUrl,
+        product_name: productName,
+        product_info: productInfo,
+        selling_points: sellingPoints,
+        comments: JSON.stringify(comments)
+    });
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
+    const eventSource = new EventSource(`/api/generate-scripts-sse?${params.toString()}`);
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+    // Log when connection opens
+    eventSource.onopen = function() {
+        console.log('EventSource connected');
+    };
 
-            buffer += decoder.decode(value, { stream: true });
+    eventSource.onerror = function(error) {
+        console.error('EventSource error:', error);
+    };
 
-            // Process complete events
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
+    eventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
 
-            // Process pairs of event + data
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                if (line.startsWith('event: ')) {
-                    const eventType = line.slice(7);
-                    const nextLine = lines[i + 1];
-                    if (nextLine && nextLine.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(nextLine.slice(6));
-
-                            if (eventType === 'progress') {
-                                updateProgressStep(data.step, data.status);
-                            } else if (eventType === 'section') {
-                                // Create new section
-                                currentSection = createStreamingSection(data.label, data.field);
-                                streamingContent.appendChild(currentSection.element);
-                                streamingEl.scrollTop = streamingEl.scrollHeight;
-                            } else if (eventType === 'chunk') {
-                                // Append chunk to current section
-                                if (currentSection) {
-                                    appendChunk(currentSection, data.content);
-                                    streamingEl.scrollTop = streamingEl.scrollHeight;
-                                }
-                            } else if (eventType === 'complete') {
-                                window.latestResult = data;
-                                streamingEl.style.display = 'none';
-                                renderResults(data);
-                            } else if (eventType === 'error') {
-                                throw new Error(data.message || '生成失败');
-                            }
-                        } catch (e) {
-                            console.error('Parse error:', e);
-                        }
-                    }
-                }
+            if (data.step !== undefined) {
+                updateProgressStep(data.step, data.status);
             }
+        } catch (e) {
+            console.error('Parse error:', e);
+        }
+    };
+
+    eventSource.addEventListener('progress', function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            updateProgressStep(data.step, data.status);
+        } catch (e) {
+            console.error('Progress parse error:', e);
+        }
+    });
+
+    eventSource.addEventListener('section', function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            // Hide thinking text when first section arrives
+            if (thinkingEl) thinkingEl.style.display = 'none';
+            clearInterval(thinkingTimer);
+
+            // Replace skeleton block with real section
+            currentField = data.field;
+            accumulatedContent[currentField] = '';
+            currentSection = createStreamingSection(data.label, data.field);
+
+            // Find and replace skeleton block
+            const skeletonBlock = document.querySelector(`.fake-block[data-field="${currentField}"]`);
+            if (skeletonBlock) {
+                skeletonBlock.replaceWith(currentSection.element);
+            } else {
+                streamingContent.appendChild(currentSection.element);
+            }
+            currentSection.element.classList.add('fade-in');
+            streamingEl.scrollTop = streamingEl.scrollHeight;
+        } catch (e) {
+            console.error('Section parse error:', e);
+        }
+    });
+
+    eventSource.addEventListener('chunk', function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            // Accumulate content and type it
+            if (currentField && currentSection) {
+                accumulatedContent[currentField] += data.content;
+                // Use typewriter effect
+                typeWriter(currentSection.textEl, accumulatedContent[currentField], currentSection.cursor);
+                streamingEl.scrollTop = streamingEl.scrollHeight;
+            }
+        } catch (e) {
+            console.error('Chunk parse error:', e);
+        }
+    });
+
+    eventSource.addEventListener('complete', function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            isCompleted = true;
+            clearInterval(thinkingTimer);
+            eventSource.close();
+
+            // Fade out skeleton and show results
+            const fakeStructure = document.querySelector('.fake-structure');
+            if (fakeStructure) {
+                fakeStructure.style.transition = 'opacity 0.3s';
+                fakeStructure.style.opacity = '0';
+                setTimeout(() => {
+                    streamingEl.style.display = 'none';
+                    renderResults(data);
+                }, 300);
+            } else {
+                streamingEl.style.display = 'none';
+                renderResults(data);
+            }
+
+            btn.disabled = false;
+            btn.textContent = '生成脚本';
+        } catch (e) {
+            console.error('Complete parse error:', e);
+        }
+    });
+
+    eventSource.addEventListener('error', function(event) {
+        // Don't treat as error if already completed
+        if (isCompleted) {
+            console.log('Stream completed, ignoring error');
+            return;
         }
 
-    } catch (error) {
-        console.error('Error:', error);
+        console.error('SSE Error:', event);
+        console.error('Ready state:', eventSource.readyState);
+
+        // Check if it's a genuine error or just connection end
+        if (eventSource.readyState === EventSource.CLOSED) {
+            console.log('Connection closed normally');
+            return;
+        }
+
+        clearInterval(thinkingTimer);
+        eventSource.close();
         streamingEl.style.display = 'none';
-        errorEl.textContent = '生成失败: ' + error.message;
+        errorEl.textContent = '生成失败: SSE连接错误';
         errorEl.style.display = 'block';
-    } finally {
         btn.disabled = false;
         btn.textContent = '生成脚本';
-    }
+    });
 }
 
 // Create streaming section element
@@ -412,10 +514,42 @@ function createStreamingSection(label, field) {
     };
 }
 
-// Append chunk with typewriter effect
+// Typewriter effect function
+function typeWriter(textEl, fullText, cursor) {
+    // Remove cursor temporarily
+    if (cursor && cursor.parentNode) {
+        cursor.parentNode.removeChild(cursor);
+    }
+
+    let currentText = textEl.textContent;
+    let targetText = fullText;
+
+    if (currentText === targetText) return;
+
+    // Calculate new characters to add
+    let newChars = targetText.slice(currentText.length);
+
+    // Add characters one by one with small delay
+    let i = 0;
+    function type() {
+        if (i < newChars.length) {
+            textEl.textContent = currentText + newChars.slice(0, i + 1);
+            i++;
+            setTimeout(type, 15);
+        } else {
+            // Add cursor back at the end
+            textEl.appendChild(cursor);
+        }
+    }
+    type();
+}
+
+// Append chunk with typewriter effect (legacy)
 function appendChunk(section, chunk) {
     // Remove cursor temporarily
-    section.cursor.remove();
+    if (section.cursor.parentNode) {
+        section.cursor.parentNode.removeChild(section.cursor);
+    }
 
     // Add new content
     section.textEl.textContent += chunk;
