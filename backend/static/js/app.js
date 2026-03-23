@@ -26,12 +26,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const url = this.value.trim();
             if (url && !isParsing) {
                 isParsing = true;
-                // Show parsing indicator
+
+                // Show loading state
+                this.disabled = true;
+                this.classList.add('parsing');
                 const originalPlaceholder = this.placeholder;
-                this.placeholder = '解析中...';
-                await parseProductUrl(url);
-                this.placeholder = originalPlaceholder;
-                isParsing = false;
+                this.placeholder = '🔄 解析中...';
+
+                try {
+                    await parseProductUrl(url);
+                } finally {
+                    // Remove loading state
+                    this.disabled = false;
+                    this.classList.remove('parsing');
+                    this.placeholder = originalPlaceholder;
+                    isParsing = false;
+                }
             }
         });
     }
