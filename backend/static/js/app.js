@@ -263,7 +263,7 @@ function updateProgressStep(stepNum, status) {
 
 // Parse product URL and auto-fill form
 async function parseProductUrl(url) {
-    if (!url) return;
+    if (!url) return null;
 
     try {
         const response = await fetch('/api/parse-product', {
@@ -274,7 +274,7 @@ async function parseProductUrl(url) {
 
         if (!response.ok) {
             console.error('Parse failed:', response.status);
-            return;
+            return null;
         }
 
         const data = await response.json();
@@ -291,8 +291,10 @@ async function parseProductUrl(url) {
         }
 
         console.log('Product parsed:', data);
+        return data;
     } catch (error) {
         console.error('Parse error:', error);
+        return null;
     }
 }
 
@@ -301,18 +303,20 @@ async function generateScripts() {
     const productUrl = document.getElementById('product-url').value.trim();
     const btn = document.getElementById('generate-btn');
 
-    // Parse product URL and auto-fill form
+    // Parse product URL and get data
+    let parsedData = null;
     if (productUrl) {
         btn.textContent = '🚀 解析商品链接中...';
         btn.disabled = true;
-        await parseProductUrl(productUrl);
+        parsedData = await parseProductUrl(productUrl);
         btn.disabled = false;
         btn.textContent = '🚀 AI 正在生成中（约3秒）';
     }
 
-    const productName = document.getElementById('product-name').value.trim();
+    // Use parsed data or form input
+    const productName = parsedData?.name || document.getElementById('product-name').value.trim();
     const productInfo = document.getElementById('product-info').value.trim();
-    const sellingPoints = document.getElementById('selling-points').value.trim();
+    const sellingPoints = parsedData?.selling_points || document.getElementById('selling-points').value.trim();
     const commentsText = document.getElementById('comments').value;
     const emptyState = document.getElementById('empty-state');
     const loadingEl = document.getElementById('loading');
@@ -321,8 +325,8 @@ async function generateScripts() {
     const errorEl = document.getElementById('error');
     const resultsContent = document.getElementById('results-content');
 
-    // Parse comments
-    const comments = commentsText.split('\n').map(c => c.trim()).filter(c => c);
+    // Parse comments - use parsed data or form input
+    const comments = parsedData?.comments || commentsText.split('\n').map(c => c.trim()).filter(c => c);
 
     // Validate - at least one input required (including URL)
     if (!productName && !sellingPoints && !productUrl && comments.length === 0) {

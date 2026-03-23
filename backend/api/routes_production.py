@@ -154,23 +154,11 @@ def generate_sse_events(
     logger = logging.getLogger(__name__)
 
     try:
-        # Step 0: Extract info from URL if provided
+        # Step 0: Process input (now handled by frontend parse-product)
         yield "event: progress\ndata: {\"step\": 0, \"status\": \"active\", \"message\": \"正在处理输入...\"}\n\n"
 
-        if product_url:
-            ai_info = production_service.ai_service.extract_product_info_from_url(product_url)
-            logger.info(f"URL提取信息: {ai_info}")
-
-            if not product_name:
-                product_name = ai_info.get("product_name", "")
-
-            if not selling_points:
-                selling_points = ", ".join(ai_info.get("selling_points", []))
-
-            if not comments or len(comments) < 3:
-                ai_comments = ai_info.get("comments", [])
-                if ai_comments:
-                    comments = list(comments) + ai_comments if comments else ai_comments
+        # V2: Frontend already parsed the URL, directly use the passed parameters
+        logger.info(f"直接使用前端数据 - 商品名: {product_name}, 卖点: {selling_points}, 评论数: {len(comments)}")
 
         prepared_comments = production_service.prepare_comments(
             product_name=product_name,
