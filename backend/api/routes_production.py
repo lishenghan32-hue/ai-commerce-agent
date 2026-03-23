@@ -15,6 +15,7 @@ from typing import List, Optional
 from backend.services.production_service import ProductionService
 from backend.services.export_service import ExportService
 from backend.crawler.simple_parser import parse_product as crawl_product, detect_platform
+from backend.crawler.douyin_parser import parse_douyin_product
 
 router = APIRouter()
 
@@ -301,12 +302,35 @@ class ParseProductResponse(BaseModel):
 @router.post("/parse-product", response_model=ParseProductResponse)
 def parse_product(request: ParseProductRequest):
     """
-    Parse product URL - V3 implementation
-    Uses simple HTML parser first, then AI fallback
+    Parse product URL - V3/V4 implementation
+    V4: Use Playwright for Douyin URLs
     """
     url = request.url
 
-    # Try simple HTML parsing first
+    # V4: Use Playwright for Douyin URLs
+    if "douyin" in url.lower() or "抖音" in url:
+        logger.info("Detected Douyin URL, using Playwright...")
+        try:
+            parsed = parse_douyin_product(url)
+            if parsed.get("name") or parsed.get("selling_points"):
+                # Generate comments with AI
+                if not parsed.get("comments"):
+                    comments = production_service.ai_service.generate_comments(
+                        parsed.get("name", ""),
+                        parsed.get("selling_points", "")
+                    )
+                    parsed["comments"] = comments if comments else []
+
+                logger.info(f"Playwright parsed: name={parsed.get('name')}")
+                return {
+                    "name": parsed.get("name", ""),
+                    "selling_points": parsed.get("selling_points", ""),
+                    "comments": parsed.get("comments", [])
+                }
+        except Exception as e:
+            logger.error(f"Playwright parsing failed: {e}")
+
+    # V3: Try simple HTML parsing first
     parsed = crawl_product(url)
 
     # If parsing is weak, use AI to enhance
