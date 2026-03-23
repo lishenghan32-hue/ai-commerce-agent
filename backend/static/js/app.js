@@ -27,19 +27,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (url && !isParsing) {
                 isParsing = true;
 
-                // Show loading state
-                this.disabled = true;
-                this.classList.add('parsing');
-                const originalPlaceholder = this.placeholder;
-                this.placeholder = '🔄 解析中...';
+                // Show modal loading
+                const loadingModal = document.getElementById('parse-loading');
+                loadingModal.style.display = 'flex';
 
                 try {
                     await parseProductUrl(url);
                 } finally {
-                    // Remove loading state
-                    this.disabled = false;
-                    this.classList.remove('parsing');
-                    this.placeholder = originalPlaceholder;
+                    // Hide modal loading
+                    loadingModal.style.display = 'none';
                     isParsing = false;
                 }
             }
