@@ -160,6 +160,14 @@ def generate_sse_events(
         # V2: Frontend already parsed the URL, directly use the passed parameters
         logger.info(f"直接使用前端数据 - 商品名: {product_name}, 卖点: {selling_points}, 评论数: {len(comments)}")
 
+        # Fallback protection
+        if not product_name:
+            product_name = "通用商品"
+            logger.warning("product_name 为空，使用默认值")
+        if not comments:
+            comments = ["质量不错", "性价比高", "值得购买"]
+            logger.warning("comments 为空，使用默认评论")
+
         prepared_comments = production_service.prepare_comments(
             product_name=product_name,
             product_info=product_info,

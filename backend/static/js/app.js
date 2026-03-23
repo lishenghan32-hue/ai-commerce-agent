@@ -318,6 +318,10 @@ async function generateScripts() {
     const productInfo = document.getElementById('product-info').value.trim();
     const sellingPoints = parsedData?.selling_points || document.getElementById('selling-points').value.trim();
     const commentsText = document.getElementById('comments').value;
+
+    console.log("parsedData:", parsedData);
+    console.log("productName:", productName);
+    console.log("sellingPoints:", sellingPoints);
     const emptyState = document.getElementById('empty-state');
     const loadingEl = document.getElementById('loading');
     const streamingEl = document.getElementById('streaming');
@@ -325,8 +329,13 @@ async function generateScripts() {
     const errorEl = document.getElementById('error');
     const resultsContent = document.getElementById('results-content');
 
-    // Parse comments - use parsed data or form input
-    const comments = parsedData?.comments || commentsText.split('\n').map(c => c.trim()).filter(c => c);
+    // Parse comments - use parsed data or form input, ensure it's always an array
+    const comments = (parsedData?.comments || [])
+        .concat(
+            commentsText.split('\n').map(c => c.trim()).filter(c => c)
+        );
+
+    console.log("comments:", comments);
 
     // Validate - at least one input required (including URL)
     if (!productName && !sellingPoints && !productUrl && comments.length === 0) {
