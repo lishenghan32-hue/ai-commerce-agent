@@ -17,6 +17,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Auto-parse product URL on blur
+    const productUrlInput = document.getElementById('product-url');
+    if (productUrlInput) {
+        let isParsing = false;
+        productUrlInput.addEventListener('blur', async function() {
+            const url = this.value.trim();
+            if (url && !isParsing) {
+                isParsing = true;
+                // Show parsing indicator
+                const originalPlaceholder = this.placeholder;
+                this.placeholder = '解析中...';
+                await parseProductUrl(url);
+                this.placeholder = originalPlaceholder;
+                isParsing = false;
+            }
+        });
+    }
 });
 
 // Example data
@@ -303,23 +321,11 @@ async function generateScripts() {
     const productUrl = document.getElementById('product-url').value.trim();
     const btn = document.getElementById('generate-btn');
 
-    // Parse product URL and get data
-    let parsedData = null;
-    if (productUrl) {
-        btn.textContent = '🚀 解析商品链接中...';
-        btn.disabled = true;
-        parsedData = await parseProductUrl(productUrl);
-        btn.disabled = false;
-        btn.textContent = '🚀 AI 正在生成中（约3秒）';
-    }
-
-    // Use parsed data or form input
-    const productName = parsedData?.name || document.getElementById('product-name').value.trim();
+    // Get form values (URL auto-parse happens on blur)
+    const productName = document.getElementById('product-name').value.trim();
     const productInfo = document.getElementById('product-info').value.trim();
-    const sellingPoints = parsedData?.selling_points || document.getElementById('selling-points').value.trim();
+    const sellingPoints = document.getElementById('selling-points').value.trim();
     const commentsText = document.getElementById('comments').value;
-
-    console.log("parsedData:", parsedData);
     console.log("productName:", productName);
     console.log("sellingPoints:", sellingPoints);
     const emptyState = document.getElementById('empty-state');
@@ -329,11 +335,8 @@ async function generateScripts() {
     const errorEl = document.getElementById('error');
     const resultsContent = document.getElementById('results-content');
 
-    // Parse comments - use parsed data or form input, ensure it's always an array
-    const comments = (parsedData?.comments || [])
-        .concat(
-            commentsText.split('\n').map(c => c.trim()).filter(c => c)
-        );
+    // Parse comments from form input
+    const comments = commentsText.split('\n').map(c => c.trim()).filter(c => c);
 
     console.log("comments:", comments);
 
