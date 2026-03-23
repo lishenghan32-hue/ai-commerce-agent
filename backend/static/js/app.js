@@ -522,6 +522,31 @@ async function generateScripts() {
         }
     });
 
+    // Handle backend error events
+    eventSource.addEventListener('error', function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.message) {
+                console.error('Backend error:', data.message);
+                clearInterval(thinkingTimer);
+                eventSource.close();
+                streamingEl.style.display = 'none';
+
+                // Check if it's an API error
+                if (data.message.includes('API') || data.message.includes('MiniMax') || data.message.includes('SSL')) {
+                    errorEl.innerHTML = '⚠️ AI 服务暂时不可用，请稍后重试<br><small>可能是网络问题或 API 服务繁忙</small>';
+                } else {
+                    errorEl.textContent = '生成失败: ' + data.message;
+                }
+                errorEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = '生成脚本';
+            }
+        } catch (e) {
+            // Not a JSON error event, ignore
+        }
+    });
+
     eventSource.addEventListener('error', function(event) {
         // Don't treat as error if already completed
         if (isCompleted) {
