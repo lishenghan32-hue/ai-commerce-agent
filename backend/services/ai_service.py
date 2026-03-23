@@ -4,7 +4,11 @@ AI Service - MiniMax API integration
 import json
 import logging
 import requests
+import urllib3
 from typing import Dict, Any, List
+
+# Suppress SSL warnings when verify=False
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from backend.config import settings
 
@@ -307,12 +311,15 @@ class AIService:
         }
 
         try:
-            response = requests.post(
+            # Create session without proxy (trust_env=False disables system proxy)
+            session = requests.Session()
+            session.trust_env = False
+            response = session.post(
                 self.base_url,
                 headers=headers,
                 json=payload,
                 timeout=30,
-                proxies={"http": "http://127.0.0.1:4780", "https": "http://127.0.0.1:4780"}
+                verify=False
             )
             response.raise_for_status()
             result = response.json()
