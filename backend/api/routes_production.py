@@ -355,5 +355,3 @@ def parse_product(request: ParseProductRequest):
                 "会推荐给朋友"
             ]
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
