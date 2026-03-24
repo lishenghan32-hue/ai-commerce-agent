@@ -347,7 +347,6 @@ def parse_product(request: ParseProductRequest):
                         parsed.get("ocr_text", "")
                     )
                     parsed["structured"] = structured
-                    print(f"[DEBUG] Structured data: {structured}")
                 except Exception as e:
                     logger.error(f"Structure extraction failed: {e}")
                     parsed["structured"] = {}

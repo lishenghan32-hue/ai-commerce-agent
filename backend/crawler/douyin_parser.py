@@ -282,13 +282,3 @@ def _extract_with_locator(page) -> Dict[str, Any]:
             "ocr_text": "",
             "comments": []
         }
-
-
-# Keep backward compatibility
-def _extract_from_html(html: str) -> Dict[str, Any]:
-    """Legacy function - not used anymore"""
-    return {
-        "name": "",
-        "selling_points": "",
-        "comments": []
-    }
