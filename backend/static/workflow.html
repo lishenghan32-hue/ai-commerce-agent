@@ -18,12 +18,17 @@
         }
 
         .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
             background: white;
             border-bottom: 1px solid #eee;
             padding: 16px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 200;
         }
 
         .header h1 {
@@ -53,45 +58,82 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 24px;
+            padding-top: 80px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Input section centered initially */
+        .input-section-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Input fixed at bottom when has messages */
+        .input-section-wrapper.fixed-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 16px 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+        }
+
+        .input-section-wrapper .container-inner {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
         .input-section {
             background: white;
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* Container with fixed input needs bottom padding */
+        .container.has-fixed-input {
+            padding-bottom: 100px;
         }
 
         .input-row {
             display: flex;
-            gap: 12px;
+            gap: 8px;
         }
 
         .input-row input {
             flex: 1;
-            padding: 14px 16px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 16px 18px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
             font-family: inherit;
         }
 
         .input-row input:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .btn-start {
-            padding: 14px 28px;
+            padding: 16px 32px;
             background: #111;
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 10px;
+            font-size: 15px;
             font-weight: 500;
             cursor: pointer;
             transition: opacity 0.2s;
@@ -106,11 +148,15 @@
             cursor: not-allowed;
         }
 
-        /* Messages Flow */
+        /* Messages Flow - downward streaming (new messages at bottom, push old up) */
         .messages-container {
             display: flex;
             flex-direction: column;
             gap: 16px;
+            padding-bottom: 5px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         /* Message */
@@ -121,7 +167,7 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -165,7 +211,7 @@
         }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -373,25 +419,23 @@
         </div>
     </div>
 
-    <div class="container">
-        <!-- Input Section -->
-        <div class="input-section">
-            <div class="input-row">
-                <input
-                    type="text"
-                    id="product-url"
-                    placeholder="请输入商品链接（支持抖音、淘宝、京东等）"
-                >
-                <button id="start-btn" class="btn-start" onclick="runFlow()">开始执行</button>
-            </div>
-        </div>
+    <div class="container" id="main-container">
+        <!-- Messages Container - flows downward, new messages at bottom -->
+        <div id="messages-container" class="messages-container"></div>
 
-        <!-- Messages Container -->
-        <div id="messages-container" class="messages-container">
-            <div class="empty-state">
-                <div class="empty-icon">🔄</div>
-                <p>输入商品链接开始执行工作流</p>
-                <p class="empty-hint">系统将逐步解析商品信息，并在结构化步骤等待确认</p>
+        <!-- Input Section - centered initially, fixed at bottom when has messages -->
+        <div id="input-section-wrapper" class="input-section-wrapper">
+            <div class="container-inner">
+                <div class="input-section">
+                    <div class="input-row">
+                        <input
+                            type="text"
+                            id="product-url"
+                            placeholder="请输入商品链接（支持抖音、淘宝、京东等）"
+                        >
+                        <button id="start-btn" class="btn-start" onclick="runFlow()">开始生成</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -553,22 +597,22 @@
         // ===== Render =====
         function render() {
             const container = document.getElementById('messages-container');
+            const inputWrapper = document.getElementById('input-section-wrapper');
+            const mainContainer = document.getElementById('main-container');
 
-            if (messages.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">🔄</div>
-                        <p>输入商品链接开始执行工作流</p>
-                        <p class="empty-hint">系统将逐步解析商品信息，并在结构化步骤等待确认</p>
-                    </div>
-                `;
-                return;
+            // Toggle fixed-bottom class on input wrapper
+            if (messages.length > 0) {
+                inputWrapper.classList.add('fixed-bottom');
+                mainContainer.classList.add('has-fixed-input');
+            } else {
+                inputWrapper.classList.remove('fixed-bottom');
+                mainContainer.classList.remove('has-fixed-input');
             }
 
             container.innerHTML = messages.map((msg, index) => {
                 if (msg.type === 'message') {
                     return `
-                        <div class="message" style="animation-delay: ${index * 0.1}s">
+                        <div class="message" style="animation-delay: ${index * 0.05}s">
                             <div class="message-icon">🤖</div>
                             <div class="message-content">
                                 <div class="message-text">${msg.text}</div>
@@ -584,8 +628,13 @@
                 return '';
             }).join('');
 
-            // Scroll to bottom
-            container.scrollTop = container.scrollHeight;
+            // Auto-scroll to latest message (before input box)
+            setTimeout(() => {
+                const lastMessage = container.lastElementChild;
+                if (lastMessage) {
+                    lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+            }, 50);
         }
 
         function renderCard(type, data, index) {
