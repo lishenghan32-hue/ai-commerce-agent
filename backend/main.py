@@ -53,6 +53,15 @@ async def root():
     }
 
 
+@app.get("/workflow")
+async def workflow():
+    """Serve workflow.html"""
+    workflow_path = os.path.join(os.path.dirname(__file__), "static", "workflow.html")
+    if os.path.exists(workflow_path):
+        return FileResponse(workflow_path)
+    return {"message": "Workflow page not found"}
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
