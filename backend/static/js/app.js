@@ -314,6 +314,14 @@ async function parseProductUrl(url) {
             document.getElementById('comments').value = data.comments.join('\n');
         }
 
+        // Auto-expand advanced inputs to show parsed data
+        const advanced = document.querySelector('.advanced-inputs');
+        const toggleBtn = document.getElementById('toggleAdvanced');
+        if (advanced && advanced.style.display === 'none') {
+            advanced.style.display = 'block';
+            if (toggleBtn) toggleBtn.innerText = '收起 ▲';
+        }
+
         console.log('Product parsed:', data);
         return data;
     } catch (error) {

@@ -307,8 +307,8 @@ def parse_product(request: ParseProductRequest):
     """
     url = request.url
 
-    # V4: Use Playwright for Douyin URLs
-    if "douyin" in url.lower() or "抖音" in url:
+    # V4: Use Playwright for Douyin URLs (including jinritemai haohuo)
+    if "douyin" in url.lower() or "抖音" in url or "jinritemai.com" in url or "haohuo" in url:
         logger.info("Detected Douyin URL, using Playwright...")
         try:
             parsed = parse_douyin_product(url)
