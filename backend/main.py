@@ -53,13 +53,13 @@ async def root():
     }
 
 
-@app.get("/workflow")
-async def workflow():
-    """Serve workflow.html"""
-    workflow_path = os.path.join(os.path.dirname(__file__), "static", "workflow.html")
-    if os.path.exists(workflow_path):
-        return FileResponse(workflow_path)
-    return {"message": "Workflow page not found"}
+@app.get("/workflow_v2")
+async def workflow_v2():
+    """Serve workflow_v2.html"""
+    workflow_v2_path = os.path.join(os.path.dirname(__file__), "static", "workflow_v2.html")
+    if os.path.exists(workflow_v2_path):
+        return FileResponse(workflow_v2_path)
+    return {"message": "Workflow V2 page not found"}
 
 
 @app.get("/health")

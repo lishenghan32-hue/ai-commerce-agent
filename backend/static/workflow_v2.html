@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Commerce - 工作流模式</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 1px solid #eee;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #111;
+        }
+
+        .header .nav {
+            display: flex;
+            gap: 16px;
+        }
+
+        .header .nav a {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .header .nav a:hover {
+            color: #667eea;
+        }
+
+        .header .nav a.active {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 1px solid #eee;
+            padding: 12px 24px;
+            z-index: 150;
+        }
+
+        .progress-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+            gap: 0;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            color: #ccc;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .progress-step.completed {
+            color: #10b981;
+        }
+
+        .progress-step-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            margin-right: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.completed .progress-step-icon {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .progress-step.active .progress-step-icon {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        .progress-step-label {
+            white-space: nowrap;
+        }
+
+        .progress-connector {
+            width: 40px;
+            height: 2px;
+            background: #eee;
+            margin: 0 8px;
+        }
+
+        .progress-connector.completed {
+            background: #10b981;
+        }
+
+        /* Stop Button */
+        .stop-btn {
+            position: fixed;
+            top: 70px;
+            right: 24px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            z-index: 160;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .stop-btn:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 80px 24px 120px;
+            min-height: 100vh;
+        }
+
+        /* Messages Container */
+        .messages-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Message Bubble */
+        .message-wrapper {
+            display: flex;
+            gap: 12px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-wrapper.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .message-avatar.ai {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .message-avatar.user {
+            background: #111;
+        }
+
+        .message-content {
+            max-width: 70%;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message-wrapper:not(.user) .message-bubble {
+            background: white;
+            border: 1px solid #eee;
+            border-top-left-radius: 4px;
+        }
+
+        .message-wrapper.user .message-bubble {
+            background: #111;
+            color: white;
+            border-top-right-radius: 4px;
+        }
+
+        /* Typing Cursor */
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 16px;
+            background: #667eea;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* Loading Skeleton */
+        .loading-bubble {
+            background: white;
+            border: 1px solid #eee;
+            border-top-left-radius: 4px;
+            padding: 16px;
+            min-width: 120px;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ddd;
+            animation: pulse 1.4s infinite ease-in-out;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: 0s; }
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            max-width: 70%;
+            margin-left: 48px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .card-tag {
+            padding: 4px 10px;
+            background: #667eea;
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 4px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .ai-badge {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 12px;
+        }
+
+        .ai-icon {
+            font-size: 12px;
+        }
+
+        .structured-field input.edited {
+            border-color: #667eea;
+            background: #f8f6ff;
+        }
+
+        .structured-field label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .reset-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #f0f0ff;
+        }
+
+        /* Product Card */
+        .product-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .product-item {
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .product-item .label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        .product-item .value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* OCR Card */
+        .ocr-text {
+            padding: 14px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        /* Structured Card */
+        .structured-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .structured-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .structured-field label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .structured-field input {
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .structured-field input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-confirm {
+            margin-top: 16px;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-confirm:hover {
+            background: #5a6fd6;
+        }
+
+        /* Scripts Card */
+        .script-section {
+            margin-bottom: 16px;
+        }
+
+        .script-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .script-section-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .script-section-content {
+            padding: 12px 14px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #333;
+        }
+
+        .script-section:last-child .script-section-content {
+            background: #fff5f5;
+            border-left: 3px solid #ff4757;
+        }
+
+        /* Input Section */
+        .input-section-wrapper {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 16px 24px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+        }
+
+        .input-container {
+            max-width: 900px;
+            width: 95%;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-row input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .input-row input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-start {
+            padding: 14px 24px;
+            background: #111;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-start:hover {
+            opacity: 0.85;
+        }
+
+        .btn-start:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Initial State */
+        .initial-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            text-align: center;
+        }
+
+        .initial-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .initial-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .initial-hint {
+            font-size: 14px;
+            color: #999;
+        }
+
+        /* Continue Button */
+        .continue-btn {
+            margin-top: 12px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .continue-btn:hover {
+            background: #5a6fd6;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ===== Utility Functions =====
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // ===== Real API Functions =====
+        const callParseAPI = async (url) => {
+            const response = await fetch('/api/parse-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            });
+            if (!response.ok) throw new Error('Parse failed');
+            return response.json();
+        };
+
+        const callOCRAPI = async (imageUrl) => {
+            const response = await fetch('/api/ocr-from-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_url: imageUrl })
+            });
+            if (!response.ok) throw new Error('OCR failed');
+            return response.json();
+        };
+
+        const callScriptsAPI = async (params) => {
+            const query = new URLSearchParams({
+                product_url: params.product_url || '',
+                product_name: params.product_name || '',
+                product_info: params.product_info || '',
+                selling_points: params.selling_points || '',
+                structured: JSON.stringify(params.structured || {}),
+                comments: JSON.stringify(params.comments || [])
+            });
+            const response = await fetch(`/api/generate-scripts-sse?${query}`, { method: 'GET' });
+            if (!response.ok) throw new Error('Scripts failed');
+            return response;
+        };
+
+        // ===== Mock API Functions (for testing) =====
+        const mockParseAPI = async () => {
+            await sleep(1200);
+            return {
+                name: "夏季儿童纯棉短袖套装",
+                price: "39.9",
+                platform: "抖音",
+                sales: "2.3万"
+            };
+        };
+
+        const mockOCRAPI = async () => {
+            await sleep(1500);
+            return "纯棉材质，透气吸汗，适合夏季穿着。100%纯棉面料，柔软舒适不起球。多个颜色可选，男童女童都适合。";
+        };
+
+        const mockStructuredAPI = async () => {
+            await sleep(1000);
+            return {
+                title: "夏季儿童纯棉套装",
+                material: "100%纯棉",
+                function: "透气吸汗、柔软舒适",
+                scene: "夏季日常、上学",
+                target: "3-8岁儿童",
+                advantage: "纯棉不起球，多色可选"
+            };
+        };
+
+        const mockScriptsAPI = async () => {
+            await sleep(2000);
+            return {
+                opening_hook: "家人们，这不快夏天了嘛，给孩子买衣服最愁人了",
+                pain_point: "孩子皮肤嫩，普通面料穿一会儿就闷出汗",
+                solution: "我给孩子换了这个纯棉套装，真的透气",
+                proof: "邻居家小孩穿了一个夏天，洗了好几次还是软乎乎的",
+                offer: "这波活动价39.9，比实体店便宜一半"
+            };
+        };
+
+        // ===== Components =====
+
+        // Progress Bar Component
+        function ProgressBar({ currentStep, completedSteps }) {
+            const steps = [
+                { id: 1, label: '解析商品' },
+                { id: 2, label: 'OCR识别' },
+                { id: 3, label: '结构化' },
+                { id: 4, label: '生成话术' }
+            ];
+
+            const getStepStatus = (stepId) => {
+                if (completedSteps.includes(stepId)) return 'completed';
+                if (currentStep === stepId) return 'active';
+                return 'pending';
+            };
+
+            return (
+                <div className="progress-bar" style={{ display: currentStep > 0 ? 'block' : 'none' }}>
+                    <div className="progress-steps">
+                        {steps.map((step, idx) => (
+                            <React.Fragment key={step.id}>
+                                <div className={`progress-step ${getStepStatus(step.id)}`}>
+                                    <div className="progress-step-icon">
+                                        {completedSteps.includes(step.id) ? '✓' : step.id}
+                                    </div>
+                                    <span className="progress-step-label">{step.label}</span>
+                                </div>
+                                {idx < steps.length - 1 && (
+                                    <div className={`progress-connector ${completedSteps.includes(step.id) ? 'completed' : ''}`}></div>
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Loading Bubble Component
+        function LoadingBubble({ text }) {
+            return (
+                <div className="message-wrapper">
+                    <div className="message-avatar ai">🤖</div>
+                    <div className="loading-bubble">
+                        <div className="loading-dots">
+                            <div className="loading-dot"></div>
+                            <div className="loading-dot"></div>
+                            <div className="loading-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Product Card Component
+        function ProductCard({ data }) {
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <span className="card-tag">商品</span>
+                        <span className="card-title">解析结果</span>
+                    </div>
+                    <div className="product-grid">
+                        <div className="product-item">
+                            <div className="label">商品名称</div>
+                            <div className="value">{data.name}</div>
+                        </div>
+                        <div className="product-item">
+                            <div className="label">价格</div>
+                            <div className="value">¥{data.price}</div>
+                        </div>
+                        <div className="product-item">
+                            <div className="label">平台</div>
+                            <div className="value">{data.platform}</div>
+                        </div>
+                        <div className="product-item">
+                            <div className="label">销量</div>
+                            <div className="value">{data.sales}</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // OCR Card Component
+        function OCRCard({ data }) {
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <span className="card-tag">OCR</span>
+                        <span className="card-title">图片文字识别</span>
+                    </div>
+                    <div className="ocr-text">{data}</div>
+                </div>
+            );
+        }
+
+        // Structured Card Component
+        function StructuredCard({ data, onChange, onConfirm, showConfirm }) {
+            const [editedFields, setEditedFields] = React.useState({});
+            const [originalData, setOriginalData] = React.useState({...data});
+
+            React.useEffect(() => {
+                setOriginalData({...data});
+                setEditedFields({});
+            }, [data]);
+
+            const handleFieldChange = (key, value) => {
+                const newData = {...data, [key]: value};
+                onChange(key, value);
+                setEditedFields(prev => ({...prev, [key]: value !== originalData[key]}));
+            };
+
+            const handleReset = (key) => {
+                const newData = {...data, [key]: originalData[key]};
+                onChange(key, originalData[key]);
+                setEditedFields(prev => ({...prev, [key]: false}));
+            };
+
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <span className="card-tag">结构化</span>
+                        <span className="card-title">卖点信息提取</span>
+                        <span className="ai-badge">
+                            <span className="ai-icon">⚡</span> AI 推荐
+                        </span>
+                    </div>
+                    <div className="structured-grid">
+                        {Object.keys(data).map(key => (
+                            <div className="structured-field" key={key}>
+                                <label>
+                                    {key === 'title' ? '商品标题' :
+                                     key === 'material' ? '材质' :
+                                     key === 'function' ? '功能' :
+                                     key === 'scene' ? '使用场景' :
+                                     key === 'target' ? '目标人群' :
+                                     key === 'advantage' ? '核心优势' : key}
+                                    {editedFields[key] && (
+                                        <button
+                                            className="reset-btn"
+                                            onClick={() => handleReset(key)}
+                                            title="恢复AI推荐"
+                                        >
+                                            ↩
+                                        </button>
+                                    )}
+                                </label>
+                                <input
+                                    value={data[key] || ''}
+                                    onChange={(e) => handleFieldChange(key, e.target.value)}
+                                    className={editedFields[key] ? 'edited' : ''}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    {showConfirm && (
+                        <button className="btn-confirm" onClick={onConfirm}>
+                            确认并继续
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        // Scripts Card Component
+        function ScriptsCard({ data }) {
+            const sections = [
+                { key: 'opening_hook', label: '开头吸引' },
+                { key: 'pain_point', label: '痛点描述' },
+                { key: 'solution', label: '解决方案' },
+                { key: 'proof', label: '证明案例' },
+                { key: 'offer', label: '促单话术' }
+            ];
+
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <span className="card-tag">话术</span>
+                        <span className="card-title">直播带货话术</span>
+                    </div>
+                    {sections.map(section => (
+                        <div className="script-section" key={section.key}>
+                            <div className="script-section-label">{section.label}</div>
+                            <div className="script-section-content">{data[section.key]}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // Message Bubble Component
+        function MessageBubble({ message }) {
+            const isUser = message.role === 'user';
+            const isLoading = message.type === 'loading';
+
+            if (isLoading) {
+                return (
+                    <div className="message-wrapper">
+                        <div className="message-avatar ai">🤖</div>
+                        <div className="loading-bubble">
+                            <div className="loading-dots">
+                                <div className="loading-dot"></div>
+                                <div className="loading-dot"></div>
+                                <div className="loading-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (message.cardType === 'product') {
+                return <ProductCard data={message.data} />;
+            }
+
+            if (message.cardType === 'ocr') {
+                return <OCRCard data={message.data} />;
+            }
+
+            if (message.cardType === 'structured') {
+                return (
+                    <StructuredCard
+                        data={message.data}
+                        onChange={message.onChange}
+                        onConfirm={message.onConfirm}
+                        showConfirm={message.showConfirm}
+                    />
+                );
+            }
+
+            if (message.cardType === 'scripts') {
+                return <ScriptsCard data={message.data} />;
+            }
+
+            return (
+                <div className={`message-wrapper ${isUser ? 'user' : ''}`}>
+                    <div className="message-avatar ai">{isUser ? '👤' : '🤖'}</div>
+                    <div className="message-content">
+                        <div className="message-bubble">
+                            {message.content}
+                            {message.isTyping && <span className="typing-cursor"></span>}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ===== Main App Component =====
+        function App() {
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [isTyping, setIsTyping] = useState(false);
+            const [isWaitingUser, setIsWaitingUser] = useState(false);
+            const [structuredData, setStructuredData] = useState({});
+            const [currentStep, setCurrentStep] = useState(0); // 0: idle, 1: parsing, 2: ocr, 3: structured, 4: scripts
+            const [completedSteps, setCompletedSteps] = useState([]);
+            const [isGenerating, setIsGenerating] = useState(false);
+            const parsedProductRef = useRef(null);
+            const abortControllerRef = useRef(null);
+            const bottomRef = useRef(null);
+
+            // Auto-scroll to bottom
+            useEffect(() => {
+                bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages]);
+
+            // Generate unique ID
+            const generateId = () => Math.random().toString(36).substr(2, 9);
+
+            // Add message
+            const addMessage = (message) => {
+                setMessages(prev => [...prev, { ...message, id: generateId() }]);
+            };
+
+            // Update last message
+            const updateLastMessage = (updates) => {
+                setMessages(prev => {
+                    const newMessages = [...prev];
+                    if (newMessages.length > 0) {
+                        newMessages[newMessages.length - 1] = {
+                            ...newMessages[newMessages.length - 1],
+                            ...updates
+                        };
+                    }
+                    return newMessages;
+                });
+            };
+
+            // Stream text with typewriter effect
+            const streamText = async (text, delay = 20) => {
+                setIsTyping(true);
+                let current = '';
+                for (let char of text) {
+                    current += char;
+                    updateLastMessage({ content: current, isTyping: true });
+                    await sleep(delay);
+                }
+                updateLastMessage({ content: current, isTyping: false });
+                setIsTyping(false);
+            };
+
+            // Handle structured field change
+            const handleStructuredChange = (key, value) => {
+                setStructuredData(prev => ({ ...prev, [key]: value }));
+                // Update the last message's data
+                setMessages(prev => {
+                    const newMessages = [...prev];
+                    const lastIdx = newMessages.length - 1;
+                    if (lastIdx >= 0 && newMessages[lastIdx].cardType === 'structured') {
+                        newMessages[lastIdx] = {
+                            ...newMessages[lastIdx],
+                            data: { ...newMessages[lastIdx].data, [key]: value }
+                        };
+                    }
+                    return newMessages;
+                });
+            };
+
+            // Handle stop generation
+            const handleStop = () => {
+                if (abortControllerRef.current) {
+                    abortControllerRef.current.abort();
+                    abortControllerRef.current = null;
+                }
+                setIsGenerating(false);
+                setCurrentStep(0);
+                setCompletedSteps([]);
+                addMessage({ type: 'text', content: '已停止生成', role: 'ai' });
+            };
+
+            // Continue flow after user confirmation
+            const handleContinue = async () => {
+                setIsWaitingUser(false);
+                setCurrentStep(4);
+
+                // Get the parsed product data from messages
+                const productCard = messages.find(m => m.type === 'card' && m.cardType === 'product');
+                const ocrCard = messages.find(m => m.type === 'card' && m.cardType === 'ocr');
+
+                // Step 4: Generate scripts using SSE
+                addMessage({ type: 'loading', content: '正在生成话术...', role: 'ai' });
+                await sleep(500);
+
+                try {
+                    const comments = parsedProductRef.current?.comments || [];
+                    const params = new URLSearchParams({
+                        product_name: parsedProductRef.current?.name || '',
+                        selling_points: parsedProductRef.current?.selling_points || '',
+                        structured: JSON.stringify(parsedProductRef.current?.structured || {}),
+                        comments: JSON.stringify(comments)
+                    });
+
+                    const response = await fetch(`/api/generate-scripts-sse?${params.toString()}`);
+
+                    if (!response.ok) throw new Error('话术生成失败');
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let script = {};
+                    let currentField = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const text = decoder.decode(value);
+                        const lines = text.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('event:')) continue;
+                            if (line.startsWith('data: ')) {
+                                const dataStr = line.slice(6);
+                                try {
+                                    const data = JSON.parse(dataStr);
+
+                                    if (data.field) {
+                                        currentField = data.field;
+                                        if (!script[currentField]) script[currentField] = '';
+                                        script[currentField] += data.content || '';
+                                    }
+
+                                    if (data.label) {
+                                        currentField = data.field;
+                                        script[currentField] = '';
+                                    }
+                                } catch (e) {
+                                    // Not JSON, might be progress message
+                                }
+                            }
+                        }
+                    }
+
+                    if (Object.keys(script).length === 0) {
+                        throw new Error('未生成话术');
+                    }
+
+                    // Update loading to text first
+                    updateLastMessage({ type: 'text', content: '话术生成中...', role: 'ai' });
+                    await sleep(300);
+
+                    // Stream the completion message
+                    await streamText('话术生成完成！', 30);
+
+                    setCompletedSteps(prev => [...prev, 4]);
+
+                    // Add scripts card
+                    addMessage({
+                        type: 'card',
+                        cardType: 'scripts',
+                        data: script,
+                        role: 'ai'
+                    });
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+                    console.error('Script generation error:', error);
+                    addMessage({ type: 'text', content: '话术生成出错: ' + error.message, role: 'ai' });
+                }
+            };
+
+            // Main flow
+            const runFlow = async () => {
+                if (!input.trim()) return;
+
+                const url = input.trim();
+                setMessages([]);
+                setIsWaitingUser(false);
+                setStructuredData({});
+                setCurrentStep(1);
+                setCompletedSteps([]);
+                setIsGenerating(true);
+
+                // Create abort controller
+                abortControllerRef.current = new AbortController();
+
+                // Disable input
+                const btn = document.getElementById('start-btn');
+                if (btn) btn.disabled = true;
+
+                // Store parsed data for later use
+                parsedProductRef.current = null;
+
+                try {
+                    // Step 1: Parse product
+                    addMessage({ type: 'loading', content: '正在解析商品...', role: 'ai' });
+                    const result = await callParseAPI(url);
+                    parsedProductRef.current = result;
+
+                    setCompletedSteps(prev => [...prev, 1]);
+
+                    updateLastMessage({ type: 'text', content: '商品解析完成', role: 'ai' });
+                    await sleep(500);
+
+                    addMessage({
+                        type: 'card',
+                        cardType: 'product',
+                        data: {
+                            name: result.name,
+                            price: result.selling_points?.match(/\d+/)?.[0] || '',
+                            platform: '抖音',
+                            sales: ''
+                        },
+                        role: 'ai'
+                    });
+
+                    // Step 2: OCR (using OCR text from parsed product)
+                    if (result.ocr_text) {
+                        setCurrentStep(2);
+                        addMessage({ type: 'loading', content: '正在识别图片...', role: 'ai' });
+                        const ocr = result.ocr_text;
+
+                        updateLastMessage({ type: 'text', content: '图片识别中...', role: 'ai' });
+                        await sleep(500);
+
+                        await streamText('图片内容已识别', 30);
+
+                        setCompletedSteps(prev => [...prev, 2]);
+
+                        addMessage({
+                            type: 'card',
+                            cardType: 'ocr',
+                            data: ocr,
+                            role: 'ai'
+                        });
+                    }
+
+                    // Step 3: Structured (using structured data from parsed product)
+                    if (result.structured) {
+                        setCurrentStep(3);
+                        addMessage({ type: 'loading', content: '正在提取结构化信息...', role: 'ai' });
+                        const structured = result.structured;
+
+                        setStructuredData(structured);
+
+                        updateLastMessage({ type: 'text', content: '结构化信息已提取', role: 'ai' });
+                        await sleep(500);
+
+                        setCompletedSteps(prev => [...prev, 3]);
+
+                        addMessage({
+                            type: 'card',
+                            cardType: 'structured',
+                            data: structured,
+                            role: 'ai',
+                            onChange: handleStructuredChange,
+                            onConfirm: handleContinue,
+                            showConfirm: true
+                        });
+
+                        // Pause and wait for user
+                        setIsWaitingUser(true);
+                    } else {
+                        // No structured data, continue directly to scripts
+                        handleContinue();
+                    }
+
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        return; // Stopped by user
+                    }
+                    console.error('Flow error:', error);
+                    addMessage({ type: 'text', content: '执行出错: ' + error.message, role: 'ai' });
+                } finally {
+                    if (btn) btn.disabled = false;
+                    setIsGenerating(false);
+                }
+            };
+
+            return (
+                <div>
+                    {/* Header */}
+                    <header className="header">
+                        <h1>AI Commerce Agent</h1>
+                        <nav className="nav">
+                            <a href="/">基础模式</a>
+                            <a href="/workflow_v2" className="active">工作流模式</a>
+                        </nav>
+                    </header>
+
+                    {/* Progress Bar */}
+                    <ProgressBar currentStep={currentStep} completedSteps={completedSteps} />
+
+                    {/* Stop Button */}
+                    {isGenerating && (
+                        <button className="stop-btn" onClick={handleStop}>
+                            ⏹ 停止生成
+                        </button>
+                    )}
+
+                    {/* Main Content */}
+                    <main className="main-container" style={{ paddingTop: currentStep > 0 ? '130px' : '80px' }}>
+                        {messages.length === 0 ? (
+                            <div className="initial-state">
+                                <div className="initial-icon">🔄</div>
+                                <div className="initial-title">AI Live Broadcast Script Generation Agent</div>
+                                <div className="initial-hint">输入商品链接开始执行直播话术生成智能体</div>
+                            </div>
+                        ) : (
+                            <div className="messages-container">
+                                {messages.map((msg, idx) => (
+                                    <MessageBubble key={msg.id || idx} message={msg} />
+                                ))}
+                                <div ref={bottomRef}></div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Input Section */}
+                    <div className="input-section-wrapper">
+                        <div className="input-container">
+                            <div className="input-row">
+                                <input
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder="请输入商品链接（支持抖音、淘宝、京东等）"
+                                    onKeyPress={(e) => e.key === 'Enter' && runFlow()}
+                                />
+                                <button
+                                    id="start-btn"
+                                    className="btn-start"
+                                    onClick={runFlow}
+                                >
+                                    开始生成
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
