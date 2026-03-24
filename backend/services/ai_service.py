@@ -274,6 +274,57 @@ class AIService:
                 "符合描述"
             ]
 
+    def summarize_product_info(self, name: str, ocr_text: str, existing_selling_points: str = "") -> Dict[str, Any]:
+        """
+        Summarize and enhance product info using AI from OCR text
+
+        Args:
+            name: Product name
+            ocr_text: OCR extracted text from product image
+            existing_selling_points: Already extracted selling points
+
+        Returns:
+            Dict with product_name, selling_points
+        """
+        if not ocr_text and not existing_selling_points:
+            return {
+                "product_name": name,
+                "selling_points": ""
+            }
+
+        try:
+            prompt = f"""从以下OCR识别文本中提取产品卖点信息，并返回JSON格式。
+
+商品名称: {name}
+现有卖点: {existing_selling_points}
+OCR文本: {ocr_text}
+
+请返回JSON格式:
+{{
+    "product_name": "优化后的商品名称",
+    "selling_points": "提炼后的卖点，用中文逗号分隔"
+}}
+
+要求：
+1. 商品名称要更具体准确
+2. 卖点要从OCR文本中提取有价值的信息
+3. 只返回JSON，不要解释"""
+
+            raw_response = self._call_api(prompt)
+            json_response = self._extract_json_with_llm(raw_response)
+            parsed = json.loads(json_response)
+
+            return {
+                "product_name": parsed.get("product_name") or name,
+                "selling_points": parsed.get("selling_points") or existing_selling_points
+            }
+        except Exception as e:
+            logger.error(f"Failed to summarize product info: {e}")
+            return {
+                "product_name": name,
+                "selling_points": existing_selling_points
+            }
+
     # ==================== 内部方法 ====================
 
     def _call_api(self, prompt: str) -> str:

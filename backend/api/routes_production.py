@@ -296,6 +296,7 @@ class ParseProductResponse(BaseModel):
     """Response model for product parsing"""
     name: str
     selling_points: str
+    ocr_text: str = ""
     comments: List[str]
 
 
@@ -312,7 +313,22 @@ def parse_product(request: ParseProductRequest):
         logger.info("Detected Douyin URL, using Playwright...")
         try:
             parsed = parse_douyin_product(url)
-            if parsed.get("name") or parsed.get("selling_points"):
+            if parsed.get("name") or parsed.get("selling_points") or parsed.get("ocr_text"):
+                # Use AI to enhance/summarize from OCR text
+                if parsed.get("ocr_text"):
+                    try:
+                        ai_summary = production_service.ai_service.summarize_product_info(
+                            parsed.get("name", ""),
+                            parsed.get("ocr_text", ""),
+                            parsed.get("selling_points", "")
+                        )
+                        if ai_summary.get("product_name"):
+                            parsed["name"] = ai_summary["product_name"]
+                        if ai_summary.get("selling_points"):
+                            parsed["selling_points"] = ai_summary["selling_points"]
+                    except Exception as e:
+                        logger.error(f"AI summarization failed: {e}")
+
                 # Generate comments with AI
                 if not parsed.get("comments"):
                     comments = production_service.ai_service.generate_comments(
@@ -325,6 +341,7 @@ def parse_product(request: ParseProductRequest):
                 return {
                     "name": parsed.get("name", ""),
                     "selling_points": parsed.get("selling_points", ""),
+                    "ocr_text": parsed.get("ocr_text", ""),
                     "comments": parsed.get("comments", [])
                 }
         except Exception as e:
@@ -377,6 +394,7 @@ def parse_product(request: ParseProductRequest):
     return {
         "name": parsed.get("name", ""),
         "selling_points": parsed.get("selling_points", ""),
+        "ocr_text": parsed.get("ocr_text", ""),
         "comments": parsed.get("comments", [])
     }
 

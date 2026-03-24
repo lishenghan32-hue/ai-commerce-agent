@@ -17,6 +17,14 @@ try:
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
+# Try to import OCR service
+try:
+    from backend.ai_engine.ocr_service import get_ocr_service
+    OCR_SERVICE = get_ocr_service()
+except Exception as e:
+    logger.warning(f"OCR service not available: {e}")
+    OCR_SERVICE = None
+
 
 STORAGE_FILE = "storage.json"
 TIMEOUT = 15000  # 15 seconds
@@ -100,138 +108,178 @@ def parse_douyin_product(url: str) -> Dict[str, Any]:
         return {
             "name": "",
             "selling_points": "",
+            "ocr_text": "",
             "comments": []
         }
 
 
+def _extract_with_ocr(page) -> str:
+    """
+    Extract text from product images using OCR
+
+    Args:
+        page: Playwright page object
+
+    Returns:
+        Extracted text from images
+    """
+    if not OCR_SERVICE:
+        print("OCR服务不可用")
+        return ""
+
+    try:
+        # First, try to find images in product-big-img-list (highest priority)
+        image_urls = []
+
+        # Try product-big-img-list first
+        try:
+            imgs = page.locator(".product-big-img-list img")
+            count = imgs.count()
+            print(f"找到 product-big-img-list {count} 张图片")
+            for i in range(count):
+                img = imgs.nth(i)
+                src = img.get_attribute("src")
+                if src and (src.startswith("http") or src.startswith("//")):
+                    if src.startswith("//"):
+                        src = "https:" + src
+                    image_urls.append(src)
+        except Exception as e:
+            print(f"product-big-img-list 查询失败: {e}")
+
+        # If not found, try other selectors
+        if not image_urls:
+            image_selectors = [
+                ".product-big-img img",
+                ".goods-detail-img img",
+                ".goods-image img",
+                ".product-image img",
+                ".preview-main img",
+                ".swiper-wrapper img",
+                ".swiper-slide img",
+                "img[class*='goods']",
+                "img[class*='product']",
+                "img[class*='detail']",
+                ".main-image img"
+            ]
+
+            for selector in image_selectors:
+                try:
+                    imgs = page.locator(selector)
+                    count = imgs.count()
+                    for i in range(min(count, 10)):  # Limit to 10 images
+                        img = imgs.nth(i)
+                        src = img.get_attribute("src")
+                        if src and (src.startswith("http") or src.startswith("//")):
+                            if src.startswith("//"):
+                                src = "https:" + src
+                            image_urls.append(src)
+                except Exception:
+                    continue
+
+        if not image_urls:
+            print("未找到商品图片")
+            return ""
+
+        print(f"共找到 {len(image_urls)} 张商品图片")
+
+        # Process all images for OCR and combine results
+        all_ocr_texts = []
+        for i, img_url in enumerate(image_urls[:10]):  # Process up to 10 images
+            try:
+                ocr_text = OCR_SERVICE.extract_text_from_url(img_url)
+                if ocr_text and len(ocr_text) > 2:
+                    all_ocr_texts.append(ocr_text)
+                    print(f"图片 {i+1} OCR: {ocr_text[:30]}...")
+            except Exception as e:
+                print(f"图片 {i+1} OCR失败: {e}")
+
+        # Combine all OCR results
+        combined_text = " ".join(all_ocr_texts)
+        return combined_text
+
+    except Exception as e:
+        logger.error(f"OCR extraction failed: {e}")
+        return ""
+
+
 def _extract_with_locator(page) -> Dict[str, Any]:
-    """
-    Extract product data using Playwright locators
-    """
+    """Extract product data using Playwright locators with specific class selectors"""
     name = ""
     price = ""
     selling_points = ""
+    ocr_text = ""
 
     try:
-        # Wait for dynamic content to load
         page.wait_for_timeout(3000)
 
-        # ========== 1. 商品标题 ==========
-        # The product name is in the page text - find it by pattern
+        # ========= 1. 标题 =========
         try:
-            body_text = page.inner_text("body")
-
-            # Find product name pattern - look for text after price "起"
-            # Pattern: "起" followed by product name, then specs like "6-12岁"
-            patterns = [
-                r'起\s+([^\n]{10,50}?)(?:\s+(?:6-12岁|适用年龄|适用性别|面料材质|A类|莫代尔|岁|件|条))',
-                r'[\n\r]([^\n\r]{15,50})(?:适用年龄|面料材质|适用性别|A类|莫代尔)',
-                r'([^\n]{20,50})(?:6-12岁|适用年龄|莫代尔|A类)',
-            ]
-
-            for pattern in patterns:
-                match = re.search(pattern, body_text)
-                if match:
-                    candidate = match.group(1).strip()
-                    # Clean up trailing specs
-                    candidate = re.sub(r'\s+(?:6-12岁|适用年龄|适用性别|面料材质|A类|莫代尔)\s*\w*\s*$', '', candidate)
-                    if len(candidate) >= 10:
-                        name = candidate.strip()
-                        print(f"标题: {name}")
-                        break
+            el = page.locator(".title-info__text").first
+            if el.count() > 0:
+                name = el.inner_text().strip()
+                print(f"标题: {name}")
         except Exception as e:
             print(f"标题提取失败: {e}")
 
-        # ========== 2. 价格 ==========
+        # ========= 2. 价格 =========
         try:
-            body_text = page.inner_text("body")
-            # Find price - look for patterns like "¥39" or "￥39.9 起"
-            price_patterns = [
-                r'[¥￥]\s*(\d+\.?\d*)',
-                r'¥(\d+\.?\d*)',
-                r'(\d+\.?\d*)\s*起',
-            ]
-            for pattern in price_patterns:
-                matches = re.findall(pattern, body_text)
-                if matches:
-                    price = matches[0]
-                    print(f"价格: ¥{price}")
-                    break
+            el = page.locator(".price-line__price_amount").first
+            if el.count() > 0:
+                price = el.inner_text().strip()
+                print(f"价格: {price}")
         except Exception as e:
             print(f"价格提取失败: {e}")
 
-        # ========== 3. 卖点 ==========
-        # Get body text and clean it
+        # ========= 3. 卖点（参数） =========
         try:
-            body_text = page.inner_text("body")
+            items = page.locator(".label-process__item")
+            points = []
 
-            # Clean up common UI elements - more aggressive cleaning
-            # Remove app banner and opening text
-            body_text = re.sub(r'打开抖音APP\s*购物实惠又有趣\s*立即打开\s*', '', body_text)
-            # Remove pagination like "1/5"
-            body_text = re.sub(r'\d+/\d+\s*', '', body_text)
-            # Remove price indicators (¥39.9 起 etc)
-            body_text = re.sub(r'[¥￥$]\s*\d+\??\s*起\s*', '', body_text)
-            # Remove JS fragments
-            body_text = re.sub(r'!function\(\).*', '', body_text)
-            body_text = re.sub(r'Hi,.*前往抖音APP.*', '', body_text)
+            count = items.count()
+            for i in range(count):
+                item = items.nth(i)
 
-            # Remove common UI text - more patterns
-            ui_patterns = [
-                '去抢购', '加入购物车', '购物车', '店铺', '客服',
-                '商品评价', '店铺评分', '销量', '配送', '支付',
-                '立即购买', '看相似', '联系客服', '进店逛逛',
-                '产品参数', '品牌', '面料材质', '适用性别',
-                '安全等级', '更多详细参数', '价格说明', '销量说明',
-                '协议', '前往抖音APP', '可查看完整价格', '去抖音APP'
-            ]
-            for pattern in ui_patterns:
-                body_text = body_text.replace(pattern, '')
+                name_el = item.locator(".label-process__item__name")
+                value_el = item.locator(".label-process__item__value")
 
-            # Remove evaluation keywords
-            eval_patterns = ['回头客', '尺码合适', '非常舒服', '穿着很舒适', '面料柔软', '品质非常好', '轻薄']
-            for pattern in eval_patterns:
-                body_text = body_text.replace(pattern, '')
+                if name_el.count() > 0 and value_el.count() > 0:
+                    key = name_el.inner_text().strip()
+                    val = value_el.inner_text().strip()
+                    points.append(f"{key}：{val}")
 
-            # Clean up extra spaces
-            body_text = ' '.join(body_text.split())
-
-            # Get meaningful text after product name
-            # Find product name and get text after it
-            if name and name in body_text:
-                idx = body_text.find(name)
-                if idx >= 0:
-                    # Get text after product name
-                    body_text = body_text[idx + len(name):]
-
-            # Get first 200 chars as selling points
-            selling_points = body_text[:200].strip()
-
-            print(f"卖点 (前100字): {selling_points[:100]}")
-
+            selling_points = "，".join(points)
+            print(f"卖点: {selling_points}")
         except Exception as e:
             print(f"卖点提取失败: {e}")
 
-        # Debug: Print all extracted data
+        # ========= 4. 商品图片 OCR =========
+        try:
+            ocr_text = _extract_with_ocr(page)
+            if ocr_text:
+                print(f"OCR文本: {ocr_text[:100]}...")
+        except Exception as e:
+            print(f"OCR提取失败: {e}")
+
         print("=" * 50)
         print(f"商品名称: {name}")
         print(f"价格: {price}")
-        print(f"卖点: {selling_points[:100]}...")
+        print(f"卖点: {selling_points}")
         print("=" * 50)
 
         return {
             "name": name,
             "price": price,
             "selling_points": selling_points,
-            "comments": []  # Comments will be generated by AI
+            "ocr_text": ocr_text,
+            "comments": []
         }
 
     except Exception as e:
         logger.error(f"Locator extraction failed: {e}")
-        print(f"提取失败: {e}")
         return {
             "name": "",
             "selling_points": "",
+            "ocr_text": "",
             "comments": []
         }
 

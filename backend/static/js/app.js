@@ -310,6 +310,9 @@ async function parseProductUrl(url) {
         if (data.selling_points) {
             document.getElementById('selling-points').value = data.selling_points;
         }
+        if (data.ocr_text) {
+            document.getElementById('ocr-text').value = data.ocr_text;
+        }
         if (data.comments && data.comments.length > 0) {
             document.getElementById('comments').value = data.comments.join('\n');
         }
