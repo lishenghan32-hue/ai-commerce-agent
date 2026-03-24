@@ -11,7 +11,10 @@ class Settings(BaseSettings):
 
     # App
     app_name: str = "AI Commerce Insight Generator"
-    debug: bool = True
+    debug: bool = False  # 生产环境应设为 False
+
+    # CORS - 允许的前端域名
+    cors_origins: list = ["http://localhost:8000", "http://127.0.0.1:8000"]
 
     # Database (SQLite for local development)
     database_url: str = os.getenv(

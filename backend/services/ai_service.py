@@ -4,11 +4,7 @@ AI Service - MiniMax API integration
 import json
 import logging
 import requests
-import urllib3
 from typing import Dict, Any, List
-
-# Suppress SSL warnings when verify=False
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from backend.config import settings
 
@@ -319,7 +315,7 @@ class AIService:
                 headers=headers,
                 json=payload,
                 timeout=30,
-                verify=False
+                verify=True
             )
             response.raise_for_status()
             result = response.json()
