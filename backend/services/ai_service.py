@@ -142,13 +142,22 @@ class AIService:
             logger.error(f"Failed to parse JSON: {json_response}")
             return self._default_script()
 
-    def generate_multi_style_scripts(self, insights: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_multi_style_scripts(self, insights: Dict[str, Any], structured: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Generate scripts in three different styles based on same insights
+
+        Args:
+            insights: User insights from comment analysis
+            structured: Structured product data (title, material, function, scene, target, advantage)
 
         Returns:
             Dict with scripts array containing style and script content, and best_script
         """
+        if insights is None:
+            insights = {}
+        if structured is None:
+            structured = {}
+
         if not insights:
             return {
                 "scripts": [self._default_script_with_style(s) for s in ["带货型", "共情型", "理性型"]],
@@ -160,7 +169,7 @@ class AIService:
 
         for style in styles:
             try:
-                prompt = self._build_multi_style_script_prompt(insights, style)
+                prompt = self._build_multi_style_script_prompt(insights, style, structured)
                 raw_response = self._call_api(prompt)
                 json_response = self._extract_json_with_llm(raw_response)
 
@@ -636,10 +645,37 @@ offer:
 
         return prompt
 
-    def _build_multi_style_script_prompt(self, insights: Dict[str, Any], style: str) -> str:
-        """Build prompt for multi-style script generation"""
+    def _build_multi_style_script_prompt(self, insights: Dict[str, Any], style: str, structured: Dict[str, Any] = None) -> str:
+        """Build prompt for multi-style script generation
 
-        base_content = f"""用户洞察：
+        Args:
+            insights: User insights from comment analysis
+            style: Script style (带货型/共情型/理性型)
+            structured: Structured product data (title, material, function, scene, target, advantage)
+        """
+        if structured is None:
+            structured = {}
+
+        # Build structured product info for the prompt
+        struct_info = ""
+        if structured:
+            struct_parts = []
+            if structured.get("title"):
+                struct_parts.append(f"商品标题: {structured['title']}")
+            if structured.get("material"):
+                struct_parts.append(f"材质: {structured['material']}")
+            if structured.get("function"):
+                struct_parts.append(f"功能: {structured['function']}")
+            if structured.get("scene"):
+                struct_parts.append(f"使用场景: {structured['scene']}")
+            if structured.get("target"):
+                struct_parts.append(f"目标人群: {structured['target']}")
+            if structured.get("advantage"):
+                struct_parts.append(f"核心优势: {structured['advantage']}")
+            if struct_parts:
+                struct_info = "【商品结构化信息】\n" + "\n".join(struct_parts) + "\n\n"
+
+        base_content = f"""{struct_info}用户洞察：
 - 痛点: {insights.get('pain_points', [])}
 - 卖点: {insights.get('selling_points', [])}
 - 顾虑: {insights.get('concerns', [])}

@@ -16,6 +16,7 @@ from backend.services.production_service import ProductionService
 from backend.services.export_service import ExportService
 from backend.crawler.simple_parser import parse_product as crawl_product, detect_platform
 from backend.crawler.douyin_parser import parse_douyin_product
+from backend.ai_engine.structure_service import extract_product_structure
 
 router = APIRouter()
 
@@ -147,6 +148,7 @@ def generate_sse_events(
     product_name: str = "",
     product_info: str = "",
     selling_points: str = "",
+    structured: Dict = None,
     comments: List[str] = None
 ) -> Generator[str, None, None]:
     """
@@ -154,6 +156,8 @@ def generate_sse_events(
     """
     if comments is None:
         comments = []
+    if structured is None:
+        structured = {}
 
     import logging
     logger = logging.getLogger(__name__)
@@ -163,7 +167,8 @@ def generate_sse_events(
         yield "event: progress\ndata: {\"step\": 0, \"status\": \"active\", \"message\": \"正在处理输入...\"}\n\n"
 
         # V2: Frontend already parsed the URL, directly use the passed parameters
-        logger.info(f"直接使用前端数据 - 商品名: {product_name}, 卖点: {selling_points}, 评论数: {len(comments)}")
+        # V3: Use structured data for script generation
+        logger.info(f"直接使用前端数据 - 商品名: {product_name}, 卖点: {selling_points}, 结构化: {structured}, 评论数: {len(comments)}")
 
         # Fallback protection
         if not product_name:
@@ -182,6 +187,7 @@ def generate_sse_events(
 
         logger.info(f"最终商品名: {product_name}")
         logger.info(f"最终卖点: {selling_points}")
+        logger.info(f"结构化数据: {structured}")
         logger.info(f"最终评论: {prepared_comments}")
 
         if not prepared_comments:
@@ -199,8 +205,8 @@ def generate_sse_events(
         # Step 2: Generating scripts with streaming
         yield "event: progress\ndata: {\"step\": 2, \"status\": \"active\", \"message\": \"正在生成话术...\"}\n\n"
 
-        # Stream the best script content
-        result = production_service.ai_service.generate_multi_style_scripts(insights)
+        # Stream the best script content - pass structured data to AI service
+        result = production_service.ai_service.generate_multi_style_scripts(insights, structured=structured)
 
         if result.get("best_script"):
             script = result["best_script"]
@@ -241,6 +247,7 @@ def generate_scripts_sse(
     product_name: str = "",
     product_info: str = "",
     selling_points: str = "",
+    structured: str = "{}",
     comments: str = "[]"
 ):
     """
@@ -248,6 +255,7 @@ def generate_scripts_sse(
     """
     import json
     comment_list = json.loads(comments) if comments else []
+    structured_data = json.loads(structured) if structured else {}
 
     return StreamingResponse(
         generate_sse_events(
@@ -255,6 +263,7 @@ def generate_scripts_sse(
             product_name=product_name,
             product_info=product_info,
             selling_points=selling_points,
+            structured=structured_data,
             comments=comment_list
         ),
         media_type="text/event-stream",
@@ -297,6 +306,7 @@ class ParseProductResponse(BaseModel):
     name: str
     selling_points: str
     ocr_text: str = ""
+    structured: dict = {}
     comments: List[str]
 
 
@@ -329,6 +339,19 @@ def parse_product(request: ParseProductRequest):
                     except Exception as e:
                         logger.error(f"AI summarization failed: {e}")
 
+                # Extract structured product info
+                try:
+                    structured = extract_product_structure(
+                        parsed.get("name", ""),
+                        parsed.get("selling_points", ""),
+                        parsed.get("ocr_text", "")
+                    )
+                    parsed["structured"] = structured
+                    print(f"[DEBUG] Structured data: {structured}")
+                except Exception as e:
+                    logger.error(f"Structure extraction failed: {e}")
+                    parsed["structured"] = {}
+
                 # Generate comments with AI
                 if not parsed.get("comments"):
                     comments = production_service.ai_service.generate_comments(
@@ -342,6 +365,7 @@ def parse_product(request: ParseProductRequest):
                     "name": parsed.get("name", ""),
                     "selling_points": parsed.get("selling_points", ""),
                     "ocr_text": parsed.get("ocr_text", ""),
+                    "structured": parsed.get("structured", {}),
                     "comments": parsed.get("comments", [])
                 }
         except Exception as e:
@@ -391,10 +415,24 @@ def parse_product(request: ParseProductRequest):
 
     logger.info(f"Final parsed result: name={parsed.get('name')}, comments_count={len(parsed.get('comments', []))}")
 
+    # Extract structured info for non-Douyin URLs
+    if not parsed.get("structured"):
+        try:
+            structured = extract_product_structure(
+                parsed.get("name", ""),
+                parsed.get("selling_points", ""),
+                parsed.get("ocr_text", "")
+            )
+            parsed["structured"] = structured
+        except Exception as e:
+            logger.error(f"Structure extraction failed: {e}")
+            parsed["structured"] = {}
+
     return {
         "name": parsed.get("name", ""),
         "selling_points": parsed.get("selling_points", ""),
         "ocr_text": parsed.get("ocr_text", ""),
+        "structured": parsed.get("structured", {}),
         "comments": parsed.get("comments", [])
     }
 

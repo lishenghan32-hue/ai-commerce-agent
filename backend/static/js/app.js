@@ -317,6 +317,29 @@ async function parseProductUrl(url) {
             document.getElementById('comments').value = data.comments.join('\n');
         }
 
+        // Fill structured data fields
+        if (data.structured) {
+            console.log('Structured product data:', data.structured);
+            if (data.structured.title) {
+                document.getElementById('struct-title').value = data.structured.title;
+            }
+            if (data.structured.material) {
+                document.getElementById('struct-material').value = data.structured.material;
+            }
+            if (data.structured.function) {
+                document.getElementById('struct-function').value = data.structured.function;
+            }
+            if (data.structured.scene) {
+                document.getElementById('struct-scene').value = data.structured.scene;
+            }
+            if (data.structured.target) {
+                document.getElementById('struct-target').value = data.structured.target;
+            }
+            if (data.structured.advantage) {
+                document.getElementById('struct-advantage').value = data.structured.advantage;
+            }
+        }
+
         // Auto-expand advanced inputs to show parsed data
         const advanced = document.querySelector('.advanced-inputs');
         const toggleBtn = document.getElementById('toggleAdvanced');
@@ -427,12 +450,31 @@ async function generateScripts() {
     let accumulatedContent = {};
     let isCompleted = false;
 
+    // Get structured data fields
+    const structTitle = document.getElementById('struct-title').value.trim();
+    const structMaterial = document.getElementById('struct-material').value.trim();
+    const structFunction = document.getElementById('struct-function').value.trim();
+    const structScene = document.getElementById('struct-scene').value.trim();
+    const structTarget = document.getElementById('struct-target').value.trim();
+    const structAdvantage = document.getElementById('struct-advantage').value.trim();
+
+    // Build structured data object
+    const structured = {
+        title: structTitle,
+        material: structMaterial,
+        function: structFunction,
+        scene: structScene,
+        target: structTarget,
+        advantage: structAdvantage
+    };
+
     // 3. Use EventSource for true SSE
     const params = new URLSearchParams({
         product_url: productUrl,
         product_name: productName,
         product_info: productInfo,
         selling_points: sellingPoints,
+        structured: JSON.stringify(structured),
         comments: JSON.stringify(comments)
     });
 
