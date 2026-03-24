@@ -1,7 +1,9 @@
 """
 Douyin product parser using Playwright
+Uses Playwright locator for precise element extraction
 """
 import os
+import re
 import time
 import logging
 from typing import Dict, Any
@@ -15,25 +17,15 @@ try:
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
-# Try to import BeautifulSoup, fallback to html.parser
-try:
-    from bs4 import BeautifulSoup
-    BS4_AVAILABLE = True
-except ImportError:
-    try:
-        from html.parser import HTMLParser
-        BS4_AVAILABLE = False
-    except ImportError:
-        BS4_AVAILABLE = False
-
 
 STORAGE_FILE = "storage.json"
 TIMEOUT = 15000  # 15 seconds
+DEBUG_HTML_FILE = "debug.html"
 
 
 def parse_douyin_product(url: str) -> Dict[str, Any]:
     """
-    Parse Douyin product using Playwright
+    Parse Douyin product using Playwright with precise locator extraction
 
     Args:
         url: Douyin product URL
@@ -59,9 +51,9 @@ def parse_douyin_product(url: str) -> Dict[str, Any]:
                 storage_state = STORAGE_FILE
                 print(f"使用已保存的登录状态: {STORAGE_FILE}")
 
-            # Launch browser (visible, not headless)
+            # Launch browser (headless for now, easier to debug)
             browser = p.chromium.launch(
-                headless=False,
+                headless=True,
                 args=['--disable-blink-features=AutomationControlled']
             )
 
@@ -86,15 +78,17 @@ def parse_douyin_product(url: str) -> Dict[str, Any]:
             print(f"正在打开商品链接: {url}")
             page.goto(url, timeout=TIMEOUT, wait_until="domcontentloaded")
 
-            # Wait for page to load
+            # Wait for page to fully load
             page.wait_for_timeout(5000)
 
-            # Get HTML content
+            # ========== Save HTML for debugging ==========
             html = page.content()
-            print(f"HTML长度: {len(html)}")
+            with open(DEBUG_HTML_FILE, 'w', encoding='utf-8') as f:
+                f.write(html)
+            print(f"HTML已保存到: {DEBUG_HTML_FILE}")
 
-            # Extract data using BeautifulSoup
-            result = _extract_from_html(html)
+            # ========== Use Playwright locator to extract data ==========
+            result = _extract_with_locator(page)
 
             browser.close()
 
@@ -110,124 +104,143 @@ def parse_douyin_product(url: str) -> Dict[str, Any]:
         }
 
 
-def _extract_from_html(html: str) -> Dict[str, Any]:
-    """Extract product info from HTML"""
+def _extract_with_locator(page) -> Dict[str, Any]:
+    """
+    Extract product data using Playwright locators
+    """
     name = ""
+    price = ""
     selling_points = ""
 
     try:
-        if BS4_AVAILABLE:
-            # Use BeautifulSoup
-            soup = BeautifulSoup(html, 'html.parser')
+        # Wait for dynamic content to load
+        page.wait_for_timeout(3000)
 
-            # Extract title
-            og_title = soup.find("meta", property="og:title")
-            if og_title and og_title.get("content"):
-                name = og_title["content"].strip()
+        # ========== 1. 商品标题 ==========
+        # The product name is in the page text - find it by pattern
+        try:
+            body_text = page.inner_text("body")
 
-            if not name:
-                title = soup.find("title")
-                if title:
-                    name = title.get_text().strip()
-                    name = name.split('|')[0].split('-')[0].strip()
+            # Find product name pattern - look for text after price "起"
+            # Pattern: "起" followed by product name, then specs like "6-12岁"
+            patterns = [
+                r'起\s+([^\n]{10,50}?)(?:\s+(?:6-12岁|适用年龄|适用性别|面料材质|A类|莫代尔|岁|件|条))',
+                r'[\n\r]([^\n\r]{15,50})(?:适用年龄|面料材质|适用性别|A类|莫代尔)',
+                r'([^\n]{20,50})(?:6-12岁|适用年龄|莫代尔|A类)',
+            ]
 
-            if not name:
-                h1 = soup.find("h1")
-                if h1:
-                    name = h1.get_text().strip()
+            for pattern in patterns:
+                match = re.search(pattern, body_text)
+                if match:
+                    candidate = match.group(1).strip()
+                    # Clean up trailing specs
+                    candidate = re.sub(r'\s+(?:6-12岁|适用年龄|适用性别|面料材质|A类|莫代尔)\s*\w*\s*$', '', candidate)
+                    if len(candidate) >= 10:
+                        name = candidate.strip()
+                        print(f"标题: {name}")
+                        break
+        except Exception as e:
+            print(f"标题提取失败: {e}")
 
-            body = soup.find("body")
-            if body:
-                text = body.get_text()
-                text = ' '.join(text.split())
-                selling_points = text[:500]
-        else:
-            # Use built-in html.parser and regex
-            import re
+        # ========== 2. 价格 ==========
+        try:
+            body_text = page.inner_text("body")
+            # Find price - look for patterns like "¥39" or "￥39.9 起"
+            price_patterns = [
+                r'[¥￥]\s*(\d+\.?\d*)',
+                r'¥(\d+\.?\d*)',
+                r'(\d+\.?\d*)\s*起',
+            ]
+            for pattern in price_patterns:
+                matches = re.findall(pattern, body_text)
+                if matches:
+                    price = matches[0]
+                    print(f"价格: ¥{price}")
+                    break
+        except Exception as e:
+            print(f"价格提取失败: {e}")
 
-            # Try to find product name from title tag
-            title_match = re.search(r'<title[^>]*>([^<]*)</title>', html, re.I)
-            if title_match and title_match.group(1).strip():
-                name = title_match.group(1).strip()
-                # Clean up common suffixes
-                name = re.split(r'[\|\-\–\-]', name)[0].strip()
+        # ========== 3. 卖点 ==========
+        # Get body text and clean it
+        try:
+            body_text = page.inner_text("body")
 
-            # Try og:title
-            if not name:
-                og_title_match = re.search(r'<meta[^>]*property=[\'"]og:title[\'"][^>]*content=[\'"]([^\'"]*)', html, re.I)
-                if og_title_match:
-                    name = og_title_match.group(1).strip()
+            # Clean up common UI elements - more aggressive cleaning
+            # Remove app banner and opening text
+            body_text = re.sub(r'打开抖音APP\s*购物实惠又有趣\s*立即打开\s*', '', body_text)
+            # Remove pagination like "1/5"
+            body_text = re.sub(r'\d+/\d+\s*', '', body_text)
+            # Remove price indicators (¥39.9 起 etc)
+            body_text = re.sub(r'[¥￥$]\s*\d+\??\s*起\s*', '', body_text)
+            # Remove JS fragments
+            body_text = re.sub(r'!function\(\).*', '', body_text)
+            body_text = re.sub(r'Hi,.*前往抖音APP.*', '', body_text)
 
-            # If still no name, get it from body text (for dynamic pages like Jinritemai)
-            if not name or name in ["打开抖音APP", ""]:
-                # Get page text content
-                body_match = re.search(r'<body[^>]*>([\s\S]*?)</body>', html, re.I)
-                if body_match:
-                    body_text = re.sub(r'<[^>]+>', ' ', body_match.group(1))
-                    body_text = ' '.join(body_text.split())
+            # Remove common UI text - more patterns
+            ui_patterns = [
+                '去抢购', '加入购物车', '购物车', '店铺', '客服',
+                '商品评价', '店铺评分', '销量', '配送', '支付',
+                '立即购买', '看相似', '联系客服', '进店逛逛',
+                '产品参数', '品牌', '面料材质', '适用性别',
+                '安全等级', '更多详细参数', '价格说明', '销量说明',
+                '协议', '前往抖音APP', '可查看完整价格', '去抖音APP'
+            ]
+            for pattern in ui_patterns:
+                body_text = body_text.replace(pattern, '')
 
-                    # Split by common separators and look for product name
-                    # Product names in this page appear after \"起 \" or price patterns
-                    import re
-                    # Look for text between price and specs
-                    patterns = [
-                        r'起\s+([^\n]{15,50})(?:[\s\n]+(?:适用|面料|尺码|年龄|性别|保障))',  # After price \"起\"
-                        r'[\n\r]([^\n\r]{15,50})(?:适用年龄|面料材质|适用性别|A类)',  # Before specs
-                        r'([^\n]{20,50})(?:6-12岁|适用年龄|莫代尔|A类)',  # Contains specs
-                    ]
-                    for pattern in patterns:
-                        match = re.search(pattern, body_text)
-                        if match:
-                            candidate = match.group(1).strip()
-                            # Validate it's a product name (not too short, contains Chinese chars)
-                            if len(candidate) >= 15 and re.search(r'[\u4e00-\u9fff]', candidate):
-                                # Clean up trailing specs like "6-12岁 适用年龄 男"
-                                candidate = re.sub(r'\s+(?:6-12岁|适用年龄|适用性别|面料材质|A类|莫代尔)\s*\w*\s*$', '', candidate)
-                                name = candidate.strip()
-                                break
+            # Remove evaluation keywords
+            eval_patterns = ['回头客', '尺码合适', '非常舒服', '穿着很舒适', '面料柔软', '品质非常好', '轻薄']
+            for pattern in eval_patterns:
+                body_text = body_text.replace(pattern, '')
 
-                    # Fallback: find longest text segment
-                    if not name:
-                        # Split by common delimiters
-                        import re
-                        parts = re.split(r'[\s]{2,}', body_text)
-                        for part in parts:
-                            part = part.strip()
-                            # Skip short lines and common UI elements
-                            if len(part) >= 15 and not any(skip in part for skip in ['打开抖音', '立即打开', '购物车', '客服', '商品评价', '店铺']):
-                                if re.search(r'[\u4e00-\u9fff]', part):  # Has Chinese
-                                    name = part
-                                    break
+            # Clean up extra spaces
+            body_text = ' '.join(body_text.split())
 
-            # Get body text for selling points
-            body_match = re.search(r'<body[^>]*>([\s\S]*?)</body>', html, re.I)
-            if body_match:
-                body_text = re.sub(r'<[^>]+>', ' ', body_match.group(1))
-                body_text = ' '.join(body_text.split())
-                # Clean up: remove app banner patterns more carefully
-                # Pattern: \"打开抖音APP\" followed by some text, then \"立即打开\"
-                body_text = re.sub(r'打开抖音APP\s*购物实惠又有趣\s*立即打开\s*', '', body_text)
-                # Remove price line like \"1/5\" or \"1/3\"
-                body_text = re.sub(r'\d+/\d+\s*', '', body_text)
-                # Remove leading price indicator
-                body_text = re.sub(r'^[￥\$¥]\s*\d+\??\s*起\s*', '', body_text)
-                # Get a reasonable portion
-                if len(body_text.strip()) > 0:
-                    # Remove JavaScript fragments
-                    body_text = re.sub(r'!function\(\).*$', '', body_text)
-                    body_text = re.sub(r'Hi,.*前往抖音APP.*$', '', body_text)
-                    selling_points = body_text[:600].strip()
+            # Get meaningful text after product name
+            # Find product name and get text after it
+            if name and name in body_text:
+                idx = body_text.find(name)
+                if idx >= 0:
+                    # Get text after product name
+                    body_text = body_text[idx + len(name):]
+
+            # Get first 200 chars as selling points
+            selling_points = body_text[:200].strip()
+
+            print(f"卖点 (前100字): {selling_points[:100]}")
+
+        except Exception as e:
+            print(f"卖点提取失败: {e}")
+
+        # Debug: Print all extracted data
+        print("=" * 50)
+        print(f"商品名称: {name}")
+        print(f"价格: {price}")
+        print(f"卖点: {selling_points[:100]}...")
+        print("=" * 50)
 
         return {
             "name": name,
+            "price": price,
             "selling_points": selling_points,
             "comments": []  # Comments will be generated by AI
         }
 
     except Exception as e:
-        logger.error(f"HTML extraction failed: {e}")
+        logger.error(f"Locator extraction failed: {e}")
+        print(f"提取失败: {e}")
         return {
             "name": "",
             "selling_points": "",
             "comments": []
         }
+
+
+# Keep backward compatibility
+def _extract_from_html(html: str) -> Dict[str, Any]:
+    """Legacy function - not used anymore"""
+    return {
+        "name": "",
+        "selling_points": "",
+        "comments": []
+    }
