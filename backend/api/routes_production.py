@@ -9,8 +9,9 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
+from typing import Dict, Generator
 
 from backend.services.production_service import ProductionService
 from backend.services.export_service import ExportService

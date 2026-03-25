@@ -620,6 +620,17 @@
             return response.json();
         };
 
+        // New streaming API for progressive OCR
+        const callParseStreamAPI = async (params) => {
+            const response = await fetch('/api/parse-product-stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            });
+            if (!response.ok) throw new Error('Parse failed');
+            return response;
+        };
+
         const callOCRAPI = async (imageUrl) => {
             const response = await fetch('/api/ocr-from-image', {
                 method: 'POST',
@@ -1026,33 +1037,39 @@
                 setIsWaitingUser(false);
                 setCurrentStep(4);
 
-                // Get the parsed product data from messages
-                const productCard = messages.find(m => m.type === 'card' && m.cardType === 'product');
-                const ocrCard = messages.find(m => m.type === 'card' && m.cardType === 'ocr');
+                // Get the parsed product data
+                const productData = parsedProductRef.current || {};
 
-                // Step 4: Generate scripts using SSE
-                setSubStep('正在生成直播话术...');
-                addMessage({ type: 'loading', content: '正在生成话术...', role: 'ai' });
-                await sleep(500);
+                // Use streaming API for OCR and script generation
+                setSubStep('正在识别商品图片...');
+                addMessage({ type: 'loading', content: '正在处理中...', role: 'ai' });
 
                 try {
-                    const comments = parsedProductRef.current?.comments || [];
-                    const params = new URLSearchParams({
-                        product_name: parsedProductRef.current?.name || '',
-                        selling_points: parsedProductRef.current?.selling_points || '',
-                        structured: JSON.stringify(parsedProductRef.current?.structured || {}),
-                        comments: JSON.stringify(comments)
+                    const requestBody = {
+                        name: productData.name || '',
+                        selling_points: productData.selling_points || '',
+                        images: productData.images || [],
+                        comments: productData.comments || []
+                    };
+
+                    const response = await fetch('/api/parse-product-stream', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
                     });
 
-                    const response = await fetch(`/api/generate-scripts-sse?${params.toString()}`);
-
-                    if (!response.ok) throw new Error('话术生成失败');
+                    if (!response.ok) throw new Error('处理失败');
 
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
+
                     let script = {};
                     let currentField = '';
+                    let ocrResults = [];
+                    let structuredData = {};
+                    let insightsData = {};
 
+                    // Process streaming events
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
@@ -1061,39 +1078,82 @@
                         const lines = text.split('\n');
 
                         for (const line of lines) {
-                            if (line.startsWith('event:')) continue;
+                            if (line.startsWith('event:')) {
+                                const eventType = line.replace('event:', '').trim();
+                                continue;
+                            }
                             if (line.startsWith('data: ')) {
                                 const dataStr = line.slice(6);
                                 try {
                                     const data = JSON.parse(dataStr);
 
-                                    if (data.field) {
-                                        currentField = data.field;
-                                        if (!script[currentField]) script[currentField] = '';
-                                        script[currentField] += data.content || '';
+                                    // Handle different event types
+                                    if (data.name !== undefined) {
+                                        // parse_complete event - update product info
+                                        updateLastMessage({ type: 'text', content: '商品信息已获取', role: 'ai' });
+                                        await sleep(300);
                                     }
 
-                                    if (data.label) {
+                                    if (data.index !== undefined) {
+                                        // ocr_image event - show each image OCR result
+                                        setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
+                                        ocrResults[data.index - 1] = data.ocr_text;
+                                        addMessage({
+                                            type: 'card',
+                                            cardType: 'ocr',
+                                            data: `图片 ${data.index}: ${data.ocr_text || '识别中...'}`,
+                                            role: 'ai'
+                                        });
+                                    }
+
+                                    if (data.pain_points !== undefined) {
+                                        // insights_complete event
+                                        insightsData = data;
+                                        setSubStep('正在分析用户洞察...');
+                                        await sleep(300);
+                                    }
+
+                                    if (data.field && data.content) {
+                                        // script_chunk event
+                                        currentField = data.field;
+                                        if (!script[currentField]) script[currentField] = '';
+                                        script[currentField] += data.content;
+
+                                        // Update last message with streaming content
+                                        const sectionLabel = {
+                                            opening_hook: '开头吸引',
+                                            pain_point: '痛点描述',
+                                            solution: '解决方案',
+                                            proof: '证明案例',
+                                            offer: '促单话术'
+                                        }[currentField] || currentField;
+
+                                        updateLastMessage({
+                                            type: 'card',
+                                            cardType: 'scripts',
+                                            data: { ...script },
+                                            role: 'ai'
+                                        });
+                                    }
+
+                                    if (data.label && !data.content) {
+                                        // script_section event - new section started
                                         currentField = data.field;
                                         script[currentField] = '';
+                                        setSubStep(`正在生成${data.label}...`);
                                     }
+
                                 } catch (e) {
-                                    // Not JSON, might be progress message
+                                    // Not JSON, skip
                                 }
                             }
                         }
                     }
 
                     if (Object.keys(script).length === 0) {
-                        throw new Error('未生成话术');
+                        // Fallback to original API if stream fails
+                        throw new Error('流式处理失败');
                     }
-
-                    // Update loading to text first
-                    updateLastMessage({ type: 'text', content: '话术生成中...', role: 'ai' });
-                    await sleep(300);
-
-                    // Stream the completion message
-                    await streamText('话术生成完成！', 30);
 
                     setSubStep('');
                     setCompletedSteps(prev => [...prev, 4]);
@@ -1101,6 +1161,16 @@
                     // Add scripts card
                     addMessage({
                         type: 'card',
+                        cardType: 'scripts',
+                        data: script,
+                        role: 'ai'
+                    });
+
+                } catch (error) {
+                    console.error('Stream processing error:', error);
+                    addMessage({ type: 'text', content: '处理出错: ' + error.message, role: 'ai' });
+                }
+            };
                         cardType: 'scripts',
                         data: script,
                         role: 'ai'
