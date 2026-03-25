@@ -140,6 +140,25 @@
             background: #10b981;
         }
 
+        .sub-step-indicator {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .sub-step-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: pulse 1s infinite;
+        }
+
         /* Stop Button */
         .stop-btn {
             position: fixed;
@@ -667,7 +686,7 @@
         // ===== Components =====
 
         // Progress Bar Component
-        function ProgressBar({ currentStep, completedSteps }) {
+        function ProgressBar({ currentStep, completedSteps, subStep }) {
             const steps = [
                 { id: 1, label: '解析商品' },
                 { id: 2, label: 'OCR识别' },
@@ -698,6 +717,12 @@
                             </React.Fragment>
                         ))}
                     </div>
+                    {subStep && (
+                        <div className="sub-step-indicator">
+                            <span className="sub-step-dot"></span>
+                            {subStep}
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -919,6 +944,7 @@
             const [isWaitingUser, setIsWaitingUser] = useState(false);
             const [structuredData, setStructuredData] = useState({});
             const [currentStep, setCurrentStep] = useState(0); // 0: idle, 1: parsing, 2: ocr, 3: structured, 4: scripts
+            const [subStep, setSubStep] = useState(''); // Detailed sub-step description
             const [completedSteps, setCompletedSteps] = useState([]);
             const [isGenerating, setIsGenerating] = useState(false);
             const parsedProductRef = useRef(null);
@@ -990,6 +1016,7 @@
                 }
                 setIsGenerating(false);
                 setCurrentStep(0);
+                setSubStep('');
                 setCompletedSteps([]);
                 addMessage({ type: 'text', content: '已停止生成', role: 'ai' });
             };
@@ -1004,6 +1031,7 @@
                 const ocrCard = messages.find(m => m.type === 'card' && m.cardType === 'ocr');
 
                 // Step 4: Generate scripts using SSE
+                setSubStep('正在生成直播话术...');
                 addMessage({ type: 'loading', content: '正在生成话术...', role: 'ai' });
                 await sleep(500);
 
@@ -1067,6 +1095,7 @@
                     // Stream the completion message
                     await streamText('话术生成完成！', 30);
 
+                    setSubStep('');
                     setCompletedSteps(prev => [...prev, 4]);
 
                     // Add scripts card
@@ -1095,6 +1124,7 @@
                 setStructuredData({});
                 setCurrentStep(1);
                 setCompletedSteps([]);
+                setSubStep('');
                 setIsGenerating(true);
 
                 // Create abort controller
@@ -1108,11 +1138,20 @@
                 parsedProductRef.current = null;
 
                 try {
-                    // Step 1: Parse product
-                    addMessage({ type: 'loading', content: '正在解析商品...', role: 'ai' });
+                    // Step 1: Parse product - sub-steps
+                    setSubStep('正在获取商品页面...');
+                    addMessage({ type: 'loading', content: '正在解析商品信息...', role: 'ai' });
+
                     const result = await callParseAPI(url);
                     parsedProductRef.current = result;
 
+                    setSubStep('提取商品卖点...');
+                    await sleep(300);
+
+                    setSubStep('生成模拟评论...');
+                    await sleep(300);
+
+                    setSubStep('');
                     setCompletedSteps(prev => [...prev, 1]);
 
                     updateLastMessage({ type: 'text', content: '商品解析完成', role: 'ai' });
@@ -1130,16 +1169,55 @@
                         role: 'ai'
                     });
 
-                    // Step 2: OCR (using OCR text from parsed product)
-                    if (result.ocr_text) {
+                    // Step 2: OCR (showing each image being processed)
+                    if (result.images && result.images.length > 0) {
                         setCurrentStep(2);
+                        const images = result.images;
+
+                        // Process each image one by one
+                        for (let i = 0; i < images.length; i++) {
+                            setSubStep(`正在识别第 ${i + 1}/${images.length} 张图片...`);
+                            addMessage({
+                                type: 'loading',
+                                content: `识别图片 ${i + 1}/${images.length}`,
+                                role: 'ai'
+                            });
+                            await sleep(800); // Simulate OCR time per image
+
+                            updateLastMessage({
+                                type: 'card',
+                                cardType: 'ocr',
+                                data: `图片 ${i + 1}: 已识别`,
+                                role: 'ai'
+                            });
+                            await sleep(300);
+                        }
+
+                        setSubStep('');
+                        setCompletedSteps(prev => [...prev, 2]);
+
+                        // Show combined OCR result
+                        if (result.ocr_text) {
+                            await streamText(`共识别 ${images.length} 张图片`, 30);
+                            addMessage({
+                                type: 'card',
+                                cardType: 'ocr',
+                                data: result.ocr_text,
+                                role: 'ai'
+                            });
+                        }
+                    } else if (result.ocr_text) {
+                        // Fallback: single OCR result
+                        setCurrentStep(2);
+                        setSubStep('正在识别商品图片...');
                         addMessage({ type: 'loading', content: '正在识别图片...', role: 'ai' });
                         const ocr = result.ocr_text;
 
-                        updateLastMessage({ type: 'text', content: '图片识别中...', role: 'ai' });
                         await sleep(500);
 
-                        await streamText('图片内容已识别', 30);
+                        setSubStep('');
+                        updateLastMessage({ type: 'text', content: '图片识别完成', role: 'ai' });
+                        await sleep(300);
 
                         setCompletedSteps(prev => [...prev, 2]);
 
@@ -1151,10 +1229,25 @@
                         });
                     }
 
-                    // Step 3: Structured (using structured data from parsed product)
+                    // Step 3: Structured (with sub-steps)
                     if (result.structured) {
                         setCurrentStep(3);
+
+                        // Sub-steps for structured extraction
+                        setSubStep('提取商品标题...');
                         addMessage({ type: 'loading', content: '正在提取结构化信息...', role: 'ai' });
+                        await sleep(400);
+
+                        setSubStep('分析材质属性...');
+                        await sleep(400);
+
+                        setSubStep('提取功能卖点...');
+                        await sleep(400);
+
+                        setSubStep('识别目标人群...');
+                        await sleep(400);
+
+                        setSubStep('');
                         const structured = result.structured;
 
                         setStructuredData(structured);
@@ -1205,7 +1298,7 @@
                     </header>
 
                     {/* Progress Bar */}
-                    <ProgressBar currentStep={currentStep} completedSteps={completedSteps} />
+                    <ProgressBar currentStep={currentStep} completedSteps={completedSteps} subStep={subStep} />
 
                     {/* Stop Button */}
                     {isGenerating && (
