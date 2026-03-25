@@ -331,6 +331,7 @@ class ParseProductResponse(BaseModel):
     ocr_text: str = ""
     structured: dict = {}
     comments: List[str]
+    images: List[str] = []
 
 
 class ParseProductStreamRequest(BaseModel):
@@ -396,7 +397,8 @@ def parse_product(request: ParseProductRequest):
                     "selling_points": parsed.get("selling_points", ""),
                     "ocr_text": parsed.get("ocr_text", ""),
                     "structured": parsed.get("structured", {}),
-                    "comments": parsed.get("comments", [])
+                    "comments": parsed.get("comments", []),
+                    "images": parsed.get("images", [])
                 }
         except Exception as e:
             logger.error(f"Playwright parsing failed: {e}")
@@ -463,7 +465,8 @@ def parse_product(request: ParseProductRequest):
         "selling_points": parsed.get("selling_points", ""),
         "ocr_text": parsed.get("ocr_text", ""),
         "structured": parsed.get("structured", {}),
-        "comments": parsed.get("comments", [])
+        "comments": parsed.get("comments", []),
+        "images": parsed.get("images", [])
     }
 
 

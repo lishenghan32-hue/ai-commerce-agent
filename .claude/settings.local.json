@@ -9,7 +9,27 @@
       "Bash(curl -s http://localhost:8000/static/js/app.js)",
       "Bash(curl -s http://localhost:8000/static/css/styles.css)",
       "Bash(curl -s http://localhost:8000/)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"python -m backend.main\")",
+      "Bash(where python:*)",
+      "Bash(/c/Python/python.exe -m backend.main)",
+      "Bash(/c/Python/python.exe -c \"print\\('hello'\\)\")",
+      "Bash(py:*)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(pip install:*)",
+      "Bash(pip config:*)",
+      "Bash(set HTTP_PROXY=http://127.0.0.1:4780)",
+      "Bash(set HTTPS_PROXY=http://127.0.0.1:4780)",
+      "Bash(where pip:*)",
+      "Bash(pip:*)",
+      "Bash(where conda:*)",
+      "Bash(/c/Python/python.exe -c \"print\\(1\\)\")",
+      "Bash(/c/Python/python.exe -c \"\nimport urllib.request\nproxy = urllib.request.ProxyHandler\\({'http': 'http://127.0.0.1:4780', 'https': 'http://127.0.0.1:4780'}\\)\nopener = urllib.request.build_opener\\(proxy\\)\nurllib.request.install_opener\\(opener\\)\ntry:\n    r = opener.open\\('https://pypi.org', timeout=10\\)\n    print\\('OK:', r.status\\)\nexcept Exception as e:\n    print\\('Error:', e\\)\n\")",
+      "Bash(/c/Python/python.exe -c \":*)",
+      "Bash(/c/Python/Scripts/pip.exe install:*)",
+      "Bash(/c/Python/Scripts/playwright.exe install:*)",
+      "Bash(tasklist)",
+      "Bash(taskkill:*)"
     ]
   }
 }

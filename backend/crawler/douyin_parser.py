@@ -202,6 +202,62 @@ def _extract_with_ocr(page) -> str:
         return ""
 
 
+def _extract_images(page) -> list:
+    """Extract product images from Douyin page"""
+    image_urls = []
+
+    # Try product-big-img-list first
+    try:
+        imgs = page.locator(".product-big-img-list img")
+        count = imgs.count()
+        print(f"Found {count} images in product-big-img-list")
+        for i in range(count):
+            img = imgs.nth(i)
+            src = img.get_attribute("src")
+            if src and (src.startswith("http") or src.startswith("//")):
+                if src.startswith("//"):
+                    src = "https:" + src
+                image_urls.append(src)
+    except Exception as e:
+        print(f"Image extraction failed: {e}")
+
+    # If not found, try other selectors
+    if not image_urls:
+        selectors = [
+            ".product-big-img img",
+            ".goods-detail-img img",
+            ".goods-image img",
+            "img[class*='goods']",
+            "img[class*='product']"
+        ]
+        for selector in selectors:
+            try:
+                imgs = page.locator(selector)
+                count = imgs.count()
+                if count > 0:
+                    print(f"Found {count} images with selector: {selector}")
+                    for i in range(min(count, 10)):
+                        img = imgs.nth(i)
+                        src = img.get_attribute("src")
+                        if src and (src.startswith("http") or src.startswith("//")):
+                            if src.startswith("//"):
+                                src = "https:" + src
+                            image_urls.append(src)
+            except Exception:
+                continue
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_images = []
+    for url in image_urls:
+        if url not in seen:
+            seen.add(url)
+            unique_images.append(url)
+
+    print(f"Total unique images: {len(unique_images)}")
+    return unique_images
+
+
 def _extract_with_locator(page) -> Dict[str, Any]:
     """Extract product data using Playwright locators with specific class selectors"""
     name = ""
@@ -260,10 +316,14 @@ def _extract_with_locator(page) -> Dict[str, Any]:
         except Exception as e:
             print(f"OCR提取失败: {e}")
 
+        # Extract product images
+        images = _extract_images(page)
+
         print("=" * 50)
         print(f"商品名称: {name}")
         print(f"价格: {price}")
         print(f"卖点: {selling_points}")
+        print(f"图片数: {len(images)}")
         print("=" * 50)
 
         return {
@@ -271,7 +331,8 @@ def _extract_with_locator(page) -> Dict[str, Any]:
             "price": price,
             "selling_points": selling_points,
             "ocr_text": ocr_text,
-            "comments": []
+            "comments": [],
+            "images": images
         }
 
     except Exception as e:
@@ -280,7 +341,8 @@ def _extract_with_locator(page) -> Dict[str, Any]:
             "name": "",
             "selling_points": "",
             "ocr_text": "",
-            "comments": []
+            "comments": [],
+            "images": []
         }
 
 

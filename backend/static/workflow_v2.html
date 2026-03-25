@@ -1171,18 +1171,6 @@
                     addMessage({ type: 'text', content: '处理出错: ' + error.message, role: 'ai' });
                 }
             };
-                        cardType: 'scripts',
-                        data: script,
-                        role: 'ai'
-                    });
-                } catch (error) {
-                    if (error.name === 'AbortError') {
-                        return;
-                    }
-                    console.error('Script generation error:', error);
-                    addMessage({ type: 'text', content: '话术生成出错: ' + error.message, role: 'ai' });
-                }
-            };
 
             // Main flow
             const runFlow = async () => {
