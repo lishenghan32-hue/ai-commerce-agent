@@ -1295,46 +1295,26 @@
                                         await sleep(300);
                                     }
 
-                                    // ocr_start event - create multiple OCR cards
-                                    if (data.total !== undefined && data.total > 0 && ocrTotal === 0) {
-                                        ocrTotal = data.total;
-                                        // Create individual OCR cards for each image
-                                        const cards = [];
-                                        for (let i = 0; i < data.total; i++) {
-                                            cards.push({
-                                                id: `ocr-${i}`,
-                                                type: 'card',
-                                                cardType: 'ocr_item',
-                                                data: {
-                                                    index: i + 1,
-                                                    text: '',
-                                                    status: 'loading'
-                                                },
-                                                role: 'ai'
-                                            });
-                                        }
-                                        setMessages(prev => [...prev, ...cards]);
+                                    // ocr_image event - create OCR card one by one (streaming)
+                                    if (data.index !== undefined) {
+                                        setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
+                                        // Add new OCR card with content directly (streaming)
+                                        setMessages(prev => [...prev, {
+                                            id: `ocr-${data.index - 1}`,
+                                            type: 'card',
+                                            cardType: 'ocr_item',
+                                            data: {
+                                                index: data.index,
+                                                text: data.ocr_text || '（未识别到文字）',
+                                                status: 'done'
+                                            },
+                                            role: 'ai'
+                                        }]);
                                     }
 
-                                    // ocr_image event - update specific OCR card by direct ID
-                                    if (data.index !== undefined) {
-                                        const cardId = `ocr-${data.index - 1}`;
-                                        setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
-                                        setMessages(prev =>
-                                            prev.map(msg => {
-                                                if (msg.id === cardId) {
-                                                    return {
-                                                        ...msg,
-                                                        data: {
-                                                            ...msg.data,
-                                                            text: data.ocr_text || '（未识别到文字）',
-                                                            status: 'done'
-                                                        }
-                                                    };
-                                                }
-                                                return msg;
-                                            })
-                                        );
+                                    // ocr_complete event - all images processed
+                                    if (data.combined_text !== undefined) {
+                                        setCompletedSteps(prev => [...new Set([...prev, 2])]);
                                     }
 
                                     if (data.pain_points !== undefined) {
@@ -1517,45 +1497,21 @@
                                     try {
                                         const data = JSON.parse(dataStr);
 
-                                        // ocr_start event - create multiple OCR cards
-                                        if (data.total !== undefined && data.total > 0 && ocrTotal === 0) {
-                                            ocrTotal = data.total;
-                                            const cards = [];
-                                            for (let i = 0; i < data.total; i++) {
-                                                cards.push({
-                                                    id: `ocr-${i}`,
-                                                    type: 'card',
-                                                    cardType: 'ocr_item',
-                                                    data: {
-                                                        index: i + 1,
-                                                        text: '',
-                                                        status: 'loading'
-                                                    },
-                                                    role: 'ai'
-                                                });
-                                            }
-                                            setMessages(prev => [...prev, ...cards]);
-                                        }
-
-                                        // ocr_image event - update specific OCR card
+                                        // ocr_image event - create OCR card one by one (streaming)
                                         if (data.index !== undefined) {
-                                            const cardId = `ocr-${data.index - 1}`;
                                             setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
-                                            setMessages(prev =>
-                                                prev.map(msg => {
-                                                    if (msg.id === cardId) {
-                                                        return {
-                                                            ...msg,
-                                                            data: {
-                                                                ...msg.data,
-                                                                text: data.ocr_text || '（未识别到文字）',
-                                                                status: 'done'
-                                                            }
-                                                        };
-                                                    }
-                                                    return msg;
-                                                })
-                                            );
+                                            // Add new OCR card with content directly (streaming)
+                                            setMessages(prev => [...prev, {
+                                                id: `ocr-${data.index - 1}`,
+                                                type: 'card',
+                                                cardType: 'ocr_item',
+                                                data: {
+                                                    index: data.index,
+                                                    text: data.ocr_text || '（未识别到文字）',
+                                                    status: 'done'
+                                                },
+                                                role: 'ai'
+                                            }]);
                                         }
 
                                         // ocr_complete event - all images processed
