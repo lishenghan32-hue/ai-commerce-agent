@@ -417,6 +417,34 @@
             color: #333;
         }
 
+        .ocr-results {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ocr-item {
+            background: #f9f9f9;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .ocr-item-header {
+            background: #667eea;
+            color: white;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .ocr-item-text {
+            padding: 14px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+        }
+
         /* Structured Card */
         .structured-grid {
             display: grid;
@@ -786,6 +814,30 @@
 
         // OCR Card Component
         function OCRCard({ data }) {
+            // Handle both string and object formats
+            const isObject = typeof data === 'object' && data !== null && data.results !== undefined;
+
+            if (isObject) {
+                const { results, current, total } = data;
+                return (
+                    <div className="card">
+                        <div className="card-header">
+                            <span className="card-tag">OCR</span>
+                            <span className="card-title">图片文字识别 ({current}/{total})</span>
+                        </div>
+                        <div className="ocr-results">
+                            {results.map((text, idx) => (
+                                <div key={idx} className="ocr-item">
+                                    <div className="ocr-item-header">图片 {idx + 1}</div>
+                                    <div className="ocr-item-text">{text || '识别中...'}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            // Legacy string format
             return (
                 <div className="card">
                     <div className="card-header">
@@ -1066,6 +1118,7 @@
                     let script = {};
                     let currentField = '';
                     let ocrResults = [];
+                    let ocrTotal = 0;
                     let structuredData = {};
                     let insightsData = {};
 
@@ -1094,15 +1147,35 @@
                                         await sleep(300);
                                     }
 
-                                    if (data.index !== undefined) {
-                                        // ocr_image event - show each image OCR result
-                                        setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
-                                        ocrResults[data.index - 1] = data.ocr_text;
+                                    // ocr_start event - initialize OCR results
+                                    if (data.total !== undefined && data.total > 0 && ocrTotal === 0) {
+                                        ocrTotal = data.total;
+                                        ocrResults = new Array(data.total).fill('');
+                                        // Create OCR card
                                         addMessage({
                                             type: 'card',
                                             cardType: 'ocr',
-                                            data: `图片 ${data.index}: ${data.ocr_text || '识别中...'}`,
+                                            data: { results: ocrResults, current: 0, total: data.total },
                                             role: 'ai'
+                                        });
+                                    }
+
+                                    if (data.index !== undefined) {
+                                        // ocr_image event - update specific image OCR result
+                                        setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
+                                        ocrResults[data.index - 1] = data.ocr_text || '（未能识别出文字）';
+
+                                        // Update the last OCR card
+                                        setMessages(prev => {
+                                            const newMessages = [...prev];
+                                            const lastIdx = newMessages.length - 1;
+                                            if (lastIdx >= 0 && newMessages[lastIdx].cardType === 'ocr') {
+                                                newMessages[lastIdx] = {
+                                                    ...newMessages[lastIdx],
+                                                    data: { results: [...ocrResults], current: data.index, total: data.total }
+                                                };
+                                            }
+                                            return newMessages;
                                         });
                                     }
 
