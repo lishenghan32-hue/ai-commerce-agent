@@ -445,6 +445,35 @@
             white-space: pre-wrap;
         }
 
+        /* OCR Summary Card */
+        .ocr-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .ocr-summary-item {
+            background: #f9f9f9;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .ocr-summary-header {
+            background: #667eea;
+            color: white;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .ocr-summary-text {
+            padding: 14px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+        }
+
         /* Structured Card */
         .structured-grid {
             display: grid;
@@ -958,6 +987,26 @@
             );
         }
 
+        // OCR Summary Card Component (OCR 汇总卡片)
+        function OCRSummaryCard({ data }) {
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <span className="card-tag">OCR</span>
+                        <span className="card-title">识别结果汇总 ({data.total}张图片)</span>
+                    </div>
+                    <div className="ocr-summary">
+                        {data.items && data.items.map((item, idx) => (
+                            <div key={idx} className="ocr-summary-item">
+                                <div className="ocr-summary-header">图片 {item.index}</div>
+                                <div className="ocr-summary-text">{item.text}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
         // Message Bubble Component
         function MessageBubble({ message }) {
             const isUser = message.role === 'user';
@@ -988,6 +1037,10 @@
 
             if (message.cardType === 'ocr_item') {
                 return <OCRItemCard data={message.data} />;
+            }
+
+            if (message.cardType === 'ocr_summary') {
+                return <OCRSummaryCard data={message.data} />;
             }
 
             if (message.cardType === 'structured') {
@@ -1479,6 +1532,7 @@
                         };
                         let currentField = '';
                         let ocrTotal = 0;
+                        let ocrTexts = []; // Store all OCR texts for summary
 
                         // Process streaming events
                         while (true) {
@@ -1499,6 +1553,8 @@
 
                                         // ocr_image event - create OCR card one by one (streaming)
                                         if (data.index !== undefined) {
+                                            ocrTotal = data.total; // Track total
+                                            ocrTexts.push(data.ocr_text || ''); // Collect OCR text
                                             setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
                                             // Add new OCR card with content directly (streaming)
                                             setMessages(prev => [...prev, {
@@ -1517,6 +1573,24 @@
                                         // ocr_complete event - all images processed
                                         if (data.combined_text !== undefined) {
                                             setCompletedSteps(prev => [...new Set([...prev, 2])]);
+
+                                            // Add OCR summary card with all collected texts
+                                            if (ocrTexts.length > 0) {
+                                                const summaryText = ocrTexts.join('\n\n');
+                                                addMessage({
+                                                    type: 'card',
+                                                    cardType: 'ocr_summary',
+                                                    data: {
+                                                        total: ocrTexts.length,
+                                                        text: summaryText,
+                                                        items: ocrTexts.map((text, idx) => ({
+                                                            index: idx + 1,
+                                                            text: text || '（未识别到文字）'
+                                                        }))
+                                                    },
+                                                    role: 'ai'
+                                                });
+                                            }
                                         }
 
                                         // structure_complete event
