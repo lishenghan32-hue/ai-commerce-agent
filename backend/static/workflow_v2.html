@@ -943,6 +943,21 @@
             );
         }
 
+        // OCR Item Card Component (单张图片 OCR 卡片)
+        function OCRItemCard({ data }) {
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <span className="card-tag">OCR</span>
+                        <span className="card-title">图片 {data.index}</span>
+                    </div>
+                    <div className="ocr-text">
+                        {data.status === 'loading' ? '识别中...' : data.text}
+                    </div>
+                </div>
+            );
+        }
+
         // Message Bubble Component
         function MessageBubble({ message }) {
             const isUser = message.role === 'user';
@@ -969,6 +984,10 @@
 
             if (message.cardType === 'ocr') {
                 return <OCRCard data={message.data} />;
+            }
+
+            if (message.cardType === 'ocr_item') {
+                return <OCRItemCard data={message.data} />;
             }
 
             if (message.cardType === 'structured') {
@@ -1071,6 +1090,129 @@
                 });
             };
 
+            // Continue to generate scripts after user confirms structured data
+            const handleScriptsContinue = async () => {
+                setIsWaitingUser(false);
+                setCurrentStep(4);
+                setSubStep('正在生成话术...');
+
+                // Get current structured data and product data
+                const currentStructured = structuredData;
+                const productData = parsedProductRef.current || {};
+
+                try {
+                    // Call scripts generation API
+                    const query = new URLSearchParams({
+                        product_url: '',
+                        product_name: productData.name || '',
+                        product_info: productData.selling_points || '',
+                        selling_points: productData.selling_points || '',
+                        structured: JSON.stringify(currentStructured),
+                        comments: JSON.stringify(productData.comments || [])
+                    });
+
+                    const response = await fetch(`/api/generate-scripts-sse?${query}`, { method: 'GET' });
+
+                    if (!response.ok) throw new Error('话术生成失败');
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    let script = {
+                        opening_hook: [],
+                        pain_point: [],
+                        solution: [],
+                        proof: [],
+                        offer: []
+                    };
+                    let currentField = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const text = decoder.decode(value);
+                        const lines = text.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const dataStr = line.slice(6);
+                                try {
+                                    const data = JSON.parse(dataStr);
+
+                                    // script_section event
+                                    if (data.label && !data.content) {
+                                        currentField = data.field;
+                                        script[currentField] = [];
+                                        setSubStep(`正在生成${data.label}...`);
+                                    }
+
+                                    // script_chunk event
+                                    if (data.field && data.content) {
+                                        currentField = data.field;
+                                        if (!script[data.field]) {
+                                            script[data.field] = [];
+                                        }
+                                        script[data.field].push(data.content);
+
+                                        const formatted = {};
+                                        Object.keys(script).forEach(key => {
+                                            formatted[key] = script[key].join('').replace(/。/g, '。\n');
+                                        });
+
+                                        const sectionLabel = {
+                                            opening_hook: '开头吸引',
+                                            pain_point: '痛点描述',
+                                            solution: '解决方案',
+                                            proof: '证明案例',
+                                            offer: '促单话术'
+                                        }[currentField] || currentField;
+
+                                        setSubStep(`正在生成${sectionLabel}...`);
+
+                                        updateLastMessage({
+                                            type: 'card',
+                                            cardType: 'scripts',
+                                            data: formatted,
+                                            role: 'ai'
+                                        });
+                                    }
+
+                                    // script_complete event
+                                    if (data.scores !== undefined) {
+                                        setSubStep('');
+                                        setCompletedSteps(prev => [...prev, 4]);
+                                    }
+
+                                } catch (e) {
+                                    // Not JSON, skip
+                                }
+                            }
+                        }
+                    }
+
+                    if (Object.keys(script).length === 0) {
+                        throw new Error('话术生成失败');
+                    }
+
+                    // Ensure final step is marked complete
+                    setCompletedSteps(prev => [...new Set([...prev, 4])]);
+                    setSubStep('');
+
+                    addMessage({
+                        type: 'card',
+                        cardType: 'scripts',
+                        data: script,
+                        role: 'ai'
+                    });
+
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                    console.error('Scripts generation error:', error);
+                    addMessage({ type: 'text', content: '话术生成出错: ' + error.message, role: 'ai' });
+                }
+            };
+
             // Handle stop generation
             const handleStop = () => {
                 if (abortControllerRef.current) {
@@ -1115,7 +1257,13 @@
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
 
-                    let script = {};
+                    let script = {
+                        opening_hook: [],
+                        pain_point: [],
+                        solution: [],
+                        proof: [],
+                        offer: []
+                    };
                     let currentField = '';
                     let ocrResults = [];
                     let ocrTotal = 0;
@@ -1147,36 +1295,46 @@
                                         await sleep(300);
                                     }
 
-                                    // ocr_start event - initialize OCR results
+                                    // ocr_start event - create multiple OCR cards
                                     if (data.total !== undefined && data.total > 0 && ocrTotal === 0) {
                                         ocrTotal = data.total;
-                                        ocrResults = new Array(data.total).fill('');
-                                        // Create OCR card
-                                        addMessage({
-                                            type: 'card',
-                                            cardType: 'ocr',
-                                            data: { results: ocrResults, current: 0, total: data.total },
-                                            role: 'ai'
-                                        });
+                                        // Create individual OCR cards for each image
+                                        const cards = [];
+                                        for (let i = 0; i < data.total; i++) {
+                                            cards.push({
+                                                id: `ocr-${i}`,
+                                                type: 'card',
+                                                cardType: 'ocr_item',
+                                                data: {
+                                                    index: i + 1,
+                                                    text: '',
+                                                    status: 'loading'
+                                                },
+                                                role: 'ai'
+                                            });
+                                        }
+                                        setMessages(prev => [...prev, ...cards]);
                                     }
 
+                                    // ocr_image event - update specific OCR card by direct ID
                                     if (data.index !== undefined) {
-                                        // ocr_image event - update specific image OCR result
+                                        const cardId = `ocr-${data.index - 1}`;
                                         setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
-                                        ocrResults[data.index - 1] = data.ocr_text || '（未能识别出文字）';
-
-                                        // Update the last OCR card
-                                        setMessages(prev => {
-                                            const newMessages = [...prev];
-                                            const lastIdx = newMessages.length - 1;
-                                            if (lastIdx >= 0 && newMessages[lastIdx].cardType === 'ocr') {
-                                                newMessages[lastIdx] = {
-                                                    ...newMessages[lastIdx],
-                                                    data: { results: [...ocrResults], current: data.index, total: data.total }
-                                                };
-                                            }
-                                            return newMessages;
-                                        });
+                                        setMessages(prev =>
+                                            prev.map(msg => {
+                                                if (msg.id === cardId) {
+                                                    return {
+                                                        ...msg,
+                                                        data: {
+                                                            ...msg.data,
+                                                            text: data.ocr_text || '（未识别到文字）',
+                                                            status: 'done'
+                                                        }
+                                                    };
+                                                }
+                                                return msg;
+                                            })
+                                        );
                                     }
 
                                     if (data.pain_points !== undefined) {
@@ -1187,10 +1345,18 @@
                                     }
 
                                     if (data.field && data.content) {
-                                        // script_chunk event
+                                        // script_chunk event - use array to cache content
                                         currentField = data.field;
-                                        if (!script[currentField]) script[currentField] = '';
-                                        script[currentField] += data.content;
+                                        if (!script[data.field]) {
+                                            script[data.field] = [];
+                                        }
+                                        script[data.field].push(data.content);
+
+                                        // Convert arrays to joined strings for display
+                                        const formatted = {};
+                                        Object.keys(script).forEach(key => {
+                                            formatted[key] = script[key].join('').replace(/。/g, '。\n');
+                                        });
 
                                         // Update last message with streaming content
                                         const sectionLabel = {
@@ -1204,7 +1370,7 @@
                                         updateLastMessage({
                                             type: 'card',
                                             cardType: 'scripts',
-                                            data: { ...script },
+                                            data: formatted,
                                             role: 'ai'
                                         });
                                     }
@@ -1212,7 +1378,7 @@
                                     if (data.label && !data.content) {
                                         // script_section event - new section started
                                         currentField = data.field;
-                                        script[currentField] = '';
+                                        script[currentField] = [];
                                         setSubStep(`正在生成${data.label}...`);
                                     }
 
@@ -1300,109 +1466,196 @@
                         role: 'ai'
                     });
 
-                    // Step 2: OCR (showing each image being processed)
-                    if (result.images && result.images.length > 0) {
-                        setCurrentStep(2);
-                        const images = result.images;
+                    // Step 2: Call streaming API for OCR, structure and scripts
+                    setCurrentStep(2);
+                    setSubStep('正在识别商品图片...');
+                    addMessage({ type: 'loading', content: '正在处理中...', role: 'ai' });
 
-                        // Process each image one by one
-                        for (let i = 0; i < images.length; i++) {
-                            setSubStep(`正在识别第 ${i + 1}/${images.length} 张图片...`);
-                            addMessage({
-                                type: 'loading',
-                                content: `识别图片 ${i + 1}/${images.length}`,
-                                role: 'ai'
-                            });
-                            await sleep(800); // Simulate OCR time per image
+                    try {
+                        const requestBody = {
+                            name: result.name || '',
+                            selling_points: result.selling_points || '',
+                            images: result.images || [],
+                            comments: result.comments || []
+                        };
 
-                            updateLastMessage({
-                                type: 'card',
-                                cardType: 'ocr',
-                                data: `图片 ${i + 1}: 已识别`,
-                                role: 'ai'
-                            });
-                            await sleep(300);
+                        const response = await fetch('/api/parse-product-stream', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(requestBody)
+                        });
+
+                        if (!response.ok) throw new Error('处理失败');
+
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+
+                        let script = {
+                            opening_hook: [],
+                            pain_point: [],
+                            solution: [],
+                            proof: [],
+                            offer: []
+                        };
+                        let currentField = '';
+                        let ocrTotal = 0;
+
+                        // Process streaming events
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            const text = decoder.decode(value);
+                            const lines = text.split('\n');
+
+                            for (const line of lines) {
+                                if (line.startsWith('event:')) {
+                                    continue;
+                                }
+                                if (line.startsWith('data: ')) {
+                                    const dataStr = line.slice(6);
+                                    try {
+                                        const data = JSON.parse(dataStr);
+
+                                        // ocr_start event - create multiple OCR cards
+                                        if (data.total !== undefined && data.total > 0 && ocrTotal === 0) {
+                                            ocrTotal = data.total;
+                                            const cards = [];
+                                            for (let i = 0; i < data.total; i++) {
+                                                cards.push({
+                                                    id: `ocr-${i}`,
+                                                    type: 'card',
+                                                    cardType: 'ocr_item',
+                                                    data: {
+                                                        index: i + 1,
+                                                        text: '',
+                                                        status: 'loading'
+                                                    },
+                                                    role: 'ai'
+                                                });
+                                            }
+                                            setMessages(prev => [...prev, ...cards]);
+                                        }
+
+                                        // ocr_image event - update specific OCR card
+                                        if (data.index !== undefined) {
+                                            const cardId = `ocr-${data.index - 1}`;
+                                            setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
+                                            setMessages(prev =>
+                                                prev.map(msg => {
+                                                    if (msg.id === cardId) {
+                                                        return {
+                                                            ...msg,
+                                                            data: {
+                                                                ...msg.data,
+                                                                text: data.ocr_text || '（未识别到文字）',
+                                                                status: 'done'
+                                                            }
+                                                        };
+                                                    }
+                                                    return msg;
+                                                })
+                                            );
+                                        }
+
+                                        // ocr_complete event - all images processed
+                                        if (data.combined_text !== undefined) {
+                                            setCompletedSteps(prev => [...new Set([...prev, 2])]);
+                                        }
+
+                                        // structure_complete event
+                                        if (data.title !== undefined) {
+                                            setSubStep('提取结构化信息...');
+                                            setCurrentStep(3);
+                                            setCompletedSteps(prev => [...new Set([...prev, 2, 3])]);
+                                            setStructuredData(data);
+                                            addMessage({
+                                                type: 'card',
+                                                cardType: 'structured',
+                                                data: data,
+                                                role: 'ai',
+                                                onChange: handleStructuredChange,
+                                                onConfirm: handleScriptsContinue,
+                                                showConfirm: true
+                                            });
+
+                                            // Pause and wait for user confirmation before generating scripts
+                                            setIsWaitingUser(true);
+                                            return; // Stop processing, wait for user
+                                        }
+
+                                        // script_chunk event
+                                        if (data.field && data.content) {
+                                            currentField = data.field;
+                                            if (!script[data.field]) {
+                                                script[data.field] = [];
+                                            }
+                                            script[data.field].push(data.content);
+
+                                            const formatted = {};
+                                            Object.keys(script).forEach(key => {
+                                                formatted[key] = script[key].join('').replace(/。/g, '。\n');
+                                            });
+
+                                            const sectionLabel = {
+                                                opening_hook: '开头吸引',
+                                                pain_point: '痛点描述',
+                                                solution: '解决方案',
+                                                proof: '证明案例',
+                                                offer: '促单话术'
+                                            }[currentField] || currentField;
+
+                                            setSubStep(`正在生成${sectionLabel}...`);
+
+                                            updateLastMessage({
+                                                type: 'card',
+                                                cardType: 'scripts',
+                                                data: formatted,
+                                                role: 'ai'
+                                            });
+                                        }
+
+                                        // script_section event
+                                        if (data.label && !data.content) {
+                                            currentField = data.field;
+                                            script[currentField] = [];
+                                            setSubStep(`正在生成${data.label}...`);
+                                        }
+
+                                        // script_complete event
+                                        if (data.scores !== undefined) {
+                                            setSubStep('');
+                                            setCompletedSteps(prev => [...prev, 4]);
+                                        }
+
+                                    } catch (e) {
+                                        // Not JSON, skip
+                                    }
+                                }
+                            }
+                        }
+
+                        if (Object.keys(script).length === 0) {
+                            throw new Error('流式处理失败');
                         }
 
                         setSubStep('');
-                        setCompletedSteps(prev => [...prev, 2]);
+                        setCompletedSteps(prev => [...prev, 2, 3, 4]);
 
-                        // Show combined OCR result
-                        if (result.ocr_text) {
-                            await streamText(`共识别 ${images.length} 张图片`, 30);
-                            addMessage({
-                                type: 'card',
-                                cardType: 'ocr',
-                                data: result.ocr_text,
-                                role: 'ai'
-                            });
-                        }
-                    } else if (result.ocr_text) {
-                        // Fallback: single OCR result
-                        setCurrentStep(2);
-                        setSubStep('正在识别商品图片...');
-                        addMessage({ type: 'loading', content: '正在识别图片...', role: 'ai' });
-                        const ocr = result.ocr_text;
-
-                        await sleep(500);
-
-                        setSubStep('');
-                        updateLastMessage({ type: 'text', content: '图片识别完成', role: 'ai' });
-                        await sleep(300);
-
-                        setCompletedSteps(prev => [...prev, 2]);
-
+                        // Add final scripts card
                         addMessage({
                             type: 'card',
-                            cardType: 'ocr',
-                            data: ocr,
+                            cardType: 'scripts',
+                            data: script,
                             role: 'ai'
                         });
-                    }
 
-                    // Step 3: Structured (with sub-steps)
-                    if (result.structured) {
-                        setCurrentStep(3);
-
-                        // Sub-steps for structured extraction
-                        setSubStep('提取商品标题...');
-                        addMessage({ type: 'loading', content: '正在提取结构化信息...', role: 'ai' });
-                        await sleep(400);
-
-                        setSubStep('分析材质属性...');
-                        await sleep(400);
-
-                        setSubStep('提取功能卖点...');
-                        await sleep(400);
-
-                        setSubStep('识别目标人群...');
-                        await sleep(400);
-
-                        setSubStep('');
-                        const structured = result.structured;
-
-                        setStructuredData(structured);
-
-                        updateLastMessage({ type: 'text', content: '结构化信息已提取', role: 'ai' });
-                        await sleep(500);
-
-                        setCompletedSteps(prev => [...prev, 3]);
-
-                        addMessage({
-                            type: 'card',
-                            cardType: 'structured',
-                            data: structured,
-                            role: 'ai',
-                            onChange: handleStructuredChange,
-                            onConfirm: handleContinue,
-                            showConfirm: true
-                        });
-
-                        // Pause and wait for user
-                        setIsWaitingUser(true);
-                    } else {
-                        // No structured data, continue directly to scripts
-                        handleContinue();
+                    } catch (error) {
+                        if (error.name === 'AbortError') {
+                            return;
+                        }
+                        console.error('Stream error:', error);
+                        addMessage({ type: 'text', content: '处理出错: ' + error.message, role: 'ai' });
                     }
 
                 } catch (error) {
