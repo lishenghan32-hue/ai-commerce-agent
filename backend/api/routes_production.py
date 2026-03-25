@@ -17,6 +17,27 @@ from backend.services.export_service import ExportService
 from backend.crawler.simple_parser import parse_product as crawl_product, detect_platform
 from backend.crawler.douyin_parser import parse_douyin_product
 from backend.ai_engine.structure_service import extract_product_structure
+from backend.ai_engine.ocr_service import get_ocr_service
+from backend.data.mock_data import get_mock_data
+
+# Platform detection based on URL
+PLATFORM_PATTERNS = {
+    "douyin": ["douyin.com", "jinritemai.com", "haohuo", "抖音"],
+    "tmall": ["detail.tmall.com", "tmall.hk", "world.tmall.com", "taobao.com"],
+    "jd": ["item.jd.com", "jd.com", "京东"],
+    "pinduoduo": ["pinduoduo.com", "yangkeduo.com", "拼多多"]
+}
+
+
+def detect_platform_from_url(url: str) -> str:
+    """Detect platform from URL"""
+    url_lower = url.lower()
+    for platform, patterns in PLATFORM_PATTERNS.items():
+        for pattern in patterns:
+            if pattern.lower() in url_lower:
+                return platform
+    return "unknown"
+
 
 router = APIRouter()
 
@@ -24,6 +45,7 @@ logger = logging.getLogger(__name__)
 
 production_service = ProductionService()
 export_service = ExportService()
+ocr_service = get_ocr_service()
 
 
 class GenerateScriptFromCommentsRequest(BaseModel):
@@ -310,6 +332,14 @@ class ParseProductResponse(BaseModel):
     comments: List[str]
 
 
+class ParseProductStreamRequest(BaseModel):
+    """Request model for streaming product parsing with OCR"""
+    name: str = ""
+    selling_points: str = ""
+    images: List[str] = []
+    comments: List[str] = []
+
+
 @router.post("/parse-product", response_model=ParseProductResponse)
 def parse_product(request: ParseProductRequest):
     """
@@ -403,7 +433,7 @@ def parse_product(request: ParseProductRequest):
     # If still empty, use mock data based on platform
     if not parsed.get("name"):
         platform = detect_platform(url)
-        mock_data = _get_mock_data(platform)
+        mock_data = get_mock_data(platform)
         parsed = {**parsed, **mock_data}
 
     # Clean up selling_points
@@ -436,38 +466,168 @@ def parse_product(request: ParseProductRequest):
     }
 
 
-def _get_mock_data(platform: str) -> Dict:
-    """Get mock data based on platform"""
-    mock_data = {
-        "taobao": {
-            "name": "美白精华液",
-            "selling_points": "美白提亮，28天见效，温和不刺激",
-            "comments": ["用了皮肤确实变白了", "就是价格有点贵", "包装很高大上", "用了一周效果不明显", "会回购的"]
-        },
-        "tmall": {
-            "name": "美白精华液",
-            "selling_points": "美白提亮，28天见效，温和不刺激",
-            "comments": ["用了皮肤确实变白了", "就是价格有点贵", "包装很高大上", "用了一周效果不明显", "会回购的"]
-        },
-        "douyin": {
-            "name": "无线蓝牙耳机",
-            "selling_points": "主动降噪，30小时续航，Hi-Fi音质",
-            "comments": ["音质真的很不错", "电池续航一般般", "操作很简单", "比实体店便宜", "售后态度很好"]
-        },
-        "jd": {
-            "name": "智能手环",
-            "selling_points": "心率监测，睡眠追踪，防水设计",
-            "comments": ["功能很全面", "续航一周没问题", "佩戴舒服", "数据不太准", "性价比高"]
-        },
-        "pinduoduo": {
-            "name": "实用小商品",
-            "selling_points": "性价比高，实用性强",
-            "comments": ["价格实惠", "质量一般", "物流很快", "包装简陋", "值得购买"]
-        },
-        "unknown": {
-            "name": "通用商品",
-            "selling_points": "高品质，性价比高，实用性强",
-            "comments": ["质量很好", "发货速度快", "包装完好", "性价比不错", "会推荐给朋友"]
+def generate_parse_ocr_stream_events(
+    product_name: str = "",
+    selling_points: str = "",
+    images: List[str] = None,
+    comments: List[str] = None
+) -> Generator[str, None, None]:
+    """
+    Generate SSE events for streaming OCR and script generation.
+    Progressive rendering: parse -> OCR per image -> structure -> script
+    """
+    if images is None:
+        images = []
+    if comments is None:
+        comments = []
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Step 0: Start - receive product info
+        product_name = product_name or "通用商品"
+        logger.info(f"开始流式处理 - 商品名: {product_name}, 图片数: {len(images)}")
+
+        yield "event: parse_start\ndata: {}\n\n"
+
+        # Step 1: Send initial product info (already parsed by frontend)
+        parse_data = json.dumps({
+            'name': product_name,
+            'selling_points': selling_points,
+            'images': images
+        }, ensure_ascii=False)
+        yield f"event: parse_complete\ndata: {parse_data}\n\n"
+
+        # Step 2: OCR per image (stream each image result)
+        all_ocr_texts = []
+
+        if images:
+            ocr_start_data = json.dumps({'total': len(images)}, ensure_ascii=False)
+            yield f"event: ocr_start\ndata: {ocr_start_data}\n\n"
+
+            for i, img_url in enumerate(images):
+                logger.info(f"OCR 处理图片 {i+1}/{len(images)}: {img_url[:50]}...")
+                ocr_text = ""
+
+                try:
+                    if ocr_service:
+                        ocr_text = ocr_service.extract_text_from_url(img_url)
+                except Exception as e:
+                    logger.error(f"OCR failed for image {i+1}: {e}")
+
+                all_ocr_texts.append(ocr_text)
+
+                # Send each image OCR result
+                ocr_image_data = json.dumps({
+                    'index': i + 1,
+                    'total': len(images),
+                    'image_url': img_url,
+                    'ocr_text': ocr_text
+                }, ensure_ascii=False)
+                yield f"event: ocr_image\ndata: {ocr_image_data}\n\n"
+
+            # Combine all OCR texts
+            combined_ocr_text = " ".join(all_ocr_texts)
+            ocr_complete_data = json.dumps({
+                'total': len(images),
+                'combined_text': combined_ocr_text
+            }, ensure_ascii=False)
+            yield f"event: ocr_complete\ndata: {ocr_complete_data}\n\n"
+        else:
+            ocr_complete_data = json.dumps({'total': 0, 'combined_text': ''}, ensure_ascii=False)
+            yield f"event: ocr_complete\ndata: {ocr_complete_data}\n\n"
+
+        # Step 3: Extract structured info
+        yield "event: structure_start\ndata: {}\n\n"
+
+        try:
+            structured = extract_product_structure(
+                product_name,
+                selling_points,
+                " ".join(all_ocr_texts)
+            )
+        except Exception as e:
+            logger.error(f"Structure extraction failed: {e}")
+            structured = {}
+
+        structure_data = json.dumps(structured, ensure_ascii=False)
+        yield f"event: structure_complete\ndata: {structure_data}\n\n"
+
+        # Step 4: Prepare comments and generate script
+        yield "event: script_start\ndata: {}\n\n"
+
+        # Prepare comments if not provided
+        if not comments:
+            if selling_points:
+                comments = production_service.ai_service.convert_selling_points_to_comments(selling_points)
+            else:
+                comments = production_service.ai_service.generate_comments(product_name, selling_points)
+
+        # Analyze comments
+        insights = production_service.ai_service.analyze_comments(comments)
+        insights_data = json.dumps({
+            'pain_points': insights.get('pain_points', []),
+            'selling_points': insights.get('selling_points', []),
+            'concerns': insights.get('concerns', []),
+            'use_cases': insights.get('use_cases', [])
+        }, ensure_ascii=False)
+        yield f"event: insights_complete\ndata: {insights_data}\n\n"
+
+        # Generate scripts
+        result = production_service.ai_service.generate_multi_style_scripts(insights, structured=structured)
+
+        # Stream script content
+        if result.get("best_script"):
+            script = result["best_script"]
+            for field, label in [
+                ("opening_hook", "开头吸引"),
+                ("pain_point", "痛点描述"),
+                ("solution", "解决方案"),
+                ("proof", "证明案例"),
+                ("offer", "促单话术")
+            ]:
+                content = script.get(field, "")
+                if content:
+                    section_data = json.dumps({'label': label, 'field': field}, ensure_ascii=False)
+                    yield f"event: script_section\ndata: {section_data}\n\n"
+                    # Stream in chunks
+                    chunk_size = 8
+                    for i in range(0, len(content), chunk_size):
+                        chunk = content[i:i+chunk_size]
+                        chunk_data = json.dumps({'content': chunk, 'field': field}, ensure_ascii=False)
+                        yield f"event: script_chunk\ndata: {chunk_data}\n\n"
+
+        yield "event: script_complete\ndata: {}\n\n"
+
+        # Send final complete data
+        complete_data = json.dumps(result, ensure_ascii=False)
+        yield f"event: complete\ndata: {complete_data}\n\n"
+
+    except Exception as e:
+        logger.error(f"Stream processing failed: {e}")
+        error_data = json.dumps({'message': str(e)}, ensure_ascii=False)
+        yield f"event: error\ndata: {error_data}\n\n"
+
+
+@router.post("/parse-product-stream")
+def parse_product_stream(request: ParseProductStreamRequest):
+    """
+    Streaming product parsing with progressive OCR and script generation.
+    Returns SSE stream for real-time UI updates.
+    """
+    return StreamingResponse(
+        generate_parse_ocr_stream_events(
+            product_name=request.name,
+            selling_points=request.selling_points,
+            images=request.images,
+            comments=request.comments
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
         }
-    }
-    return mock_data.get(platform, mock_data["unknown"])
+    )
+
+

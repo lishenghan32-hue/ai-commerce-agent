@@ -282,3 +282,99 @@ def _extract_with_locator(page) -> Dict[str, Any]:
             "ocr_text": "",
             "comments": []
         }
+
+
+# ===== Platform Parser Class =====
+
+class DouyinParser:
+    """Douyin/ECommerce product parser"""
+
+    def get_platform_name(self) -> str:
+        return "douyin"
+
+    def get_url_patterns(self) -> list:
+        return [
+            "douyin.com",
+            "jinritemai.com",
+            "haohuo"
+        ]
+
+    def extract_name(self, page) -> str:
+        """Extract product name from Douyin page"""
+        try:
+            el = page.locator(".title-info__text").first
+            if el.count() > 0:
+                return el.inner_text().strip()
+        except Exception:
+            pass
+        return ""
+
+    def extract_selling_points(self, page) -> str:
+        """Extract selling points from Douyin page"""
+        try:
+            items = page.locator(".label-process__item")
+            points = []
+            count = items.count()
+            for i in range(count):
+                item = items.nth(i)
+                name_el = item.locator(".label-process__item__name")
+                value_el = item.locator(".label-process__item__value")
+                if name_el.count() > 0 and value_el.count() > 0:
+                    key = name_el.inner_text().strip()
+                    val = value_el.inner_text().strip()
+                    points.append(f"{key}：{val}")
+            return "，".join(points)
+        except Exception:
+            pass
+        return ""
+
+    def extract_images(self, page) -> list:
+        """Extract product images from Douyin page"""
+        image_urls = []
+
+        # Try product-big-img-list first
+        try:
+            imgs = page.locator(".product-big-img-list img")
+            count = imgs.count()
+            for i in range(count):
+                img = imgs.nth(i)
+                src = img.get_attribute("src")
+                if src and (src.startswith("http") or src.startswith("//")):
+                    if src.startswith("//"):
+                        src = "https:" + src
+                    image_urls.append(src)
+        except Exception:
+            pass
+
+        # If not found, try other selectors
+        if not image_urls:
+            selectors = [
+                ".product-big-img img",
+                ".goods-detail-img img",
+                ".goods-image img",
+                "img[class*='goods']",
+                "img[class*='product']"
+            ]
+            for selector in selectors:
+                try:
+                    imgs = page.locator(selector)
+                    count = imgs.count()
+                    for i in range(min(count, 10)):
+                        img = imgs.nth(i)
+                        src = img.get_attribute("src")
+                        if src and (src.startswith("http") or src.startswith("//")):
+                            if src.startswith("//"):
+                                src = "https:" + src
+                            image_urls.append(src)
+                except Exception:
+                    continue
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_images = []
+        for url in image_urls:
+            if url not in seen:
+                seen.add(url)
+                unique_images.append(url)
+
+        return unique_images
