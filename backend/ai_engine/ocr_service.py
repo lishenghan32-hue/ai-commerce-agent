@@ -65,6 +65,7 @@ class OCRService:
             return ""
 
         try:
+            logger.info(f"[OCR] 开始处理图片: {image_url[:80]}...")
             # Download image
             req = urllib.request.Request(
                 image_url,
@@ -72,11 +73,14 @@ class OCRService:
             )
             with urllib.request.urlopen(req, timeout=15) as response:
                 image_data = response.read()
+            logger.info(f"[OCR] 图片下载成功，大小: {len(image_data)} bytes")
 
-            return self.extract_text_from_bytes(image_data)
+            result = self.extract_text_from_bytes(image_data)
+            logger.info(f"[OCR] 识别结果: {result[:200] if result else '(空)'}")
+            return result
 
         except Exception as e:
-            logger.error(f"Failed to extract text from URL {image_url}: {e}")
+            logger.error(f"[OCR] 提取文字失败 {image_url[:50]}: {e}")
             return ""
 
     def extract_text_from_bytes(self, image_bytes: bytes) -> str:
@@ -103,11 +107,14 @@ class OCRService:
                     for line in result[0]:
                         if line and len(line) >= 2:
                             text = line[1][0]
-                            # Filter out garbage results
-                            if text and not text.startswith('0') * len(text) == len(text):
+                            logger.info(f"[OCR] 识别到文字: {text}")
+                            # Filter out garbage results - keep meaningful text
+                            if text and len(text.strip()) > 0:
                                 texts.append(text)
                     if texts:
-                        return " ".join(texts)
+                        result_text = " ".join(texts)
+                        logger.info(f"[OCR] 最终结果: {result_text}")
+                        return result_text
             except Exception as e:
                 logger.error(f"PaddleOCR failed: {e}")
 

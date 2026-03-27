@@ -65,15 +65,41 @@
 
         function LoadingBubble() {
             return (
-                <div className="message-wrapper">
-                    <div className="message-avatar ai">🤖</div>
-                    <div className="loading-bubble">
-                        <div className="loading-dots">
-                            <div className="loading-dot"></div>
-                            <div className="loading-dot"></div>
-                            <div className="loading-dot"></div>
-                        </div>
+                <div className="message-item-no-avatar">
+                    <div className="line">
+                        <span className="status">🤖</span>
+                        <span className="loading-text">
+                            <span className="loading-dots-inline">
+                                <span className="loading-dot"></span>
+                                <span className="loading-dot"></span>
+                                <span className="loading-dot"></span>
+                            </span>
+                        </span>
                     </div>
+                </div>
+            );
+        }
+
+        // 无边框文字消息组件
+        function TextMessage({ status, children }) {
+            return (
+                <div className="message-item">
+                    <span className="status-icon">{status}</span>
+                    <span className="message-text">{children}</span>
+                </div>
+            );
+        }
+
+        // 多行文字消息（用于商品解析结果）
+        function LinesMessage({ lines }) {
+            return (
+                <div className="message-item-no-avatar">
+                    {lines.map((line, idx) => (
+                        <div className="line" key={idx}>
+                            <span className="status">{line.status}</span>
+                            <span dangerouslySetInnerHTML={{ __html: line.text }} />
+                        </div>
+                    ))}
                 </div>
             );
         }
@@ -310,11 +336,20 @@
         }
 
         function MessageBubble({ message }) {
-            const isUser = message.role === 'user';
             const isLoading = message.type === 'loading';
 
             if (isLoading) {
                 return <LoadingBubble />;
+            }
+
+            // 无边框文字消息
+            if (message.type === 'text') {
+                return <TextMessage status={message.status}>{message.content}</TextMessage>;
+            }
+
+            // 多行消息（商品解析结果）
+            if (message.type === 'lines') {
+                return <LinesMessage lines={message.lines} />;
             }
 
             if (message.cardType === 'product') {
@@ -331,12 +366,15 @@
 
             if (message.cardType === 'structured') {
                 return (
-                    <StructuredCard
-                        data={message.data}
-                        onChange={message.onChange}
-                        onConfirm={message.onConfirm}
-                        showConfirm={message.showConfirm}
-                    />
+                    <div className="message-item waiting">
+                        <TextMessage status="🤔">请确认商品信息</TextMessage>
+                        <StructuredCard
+                            data={message.data}
+                            onChange={message.onChange}
+                            onConfirm={message.onConfirm}
+                            showConfirm={message.showConfirm}
+                        />
+                    </div>
                 );
             }
 
@@ -344,6 +382,8 @@
                 return <ScriptsCard data={message.data} />;
             }
 
+            // 保留原有对话气泡（用户输入）
+            const isUser = message.role === 'user';
             return (
                 <div className={`message-wrapper ${isUser ? 'user' : ''}`}>
                     <div className="message-avatar ai">{isUser ? '👤' : '🤖'}</div>
@@ -419,6 +459,14 @@
                 setIsWaitingUser(false);
                 setCurrentStep(4);
                 setSubStep('正在生成话术...');
+
+                // 添加开始生成话术的消息
+                addMessage({
+                    type: 'text',
+                    status: '✅',
+                    content: '正在生成话术...',
+                    role: 'ai'
+                });
 
                 const currentStructured = structuredData;
                 const productData = parsedProductRef.current || {};
@@ -502,6 +550,14 @@
                     setCompletedSteps(prev => [...new Set([...prev, 4])]);
                     setSubStep('');
 
+                    // 完成消息
+                    addMessage({
+                        type: 'text',
+                        status: '✅',
+                        content: '话术生成完成',
+                        role: 'ai'
+                    });
+
                     addMessage({
                         type: 'card',
                         cardType: 'scripts',
@@ -512,7 +568,7 @@
                 } catch (error) {
                     if (error.name === 'AbortError') return;
                     console.error('Scripts generation error:', error);
-                    addMessage({ type: 'text', content: '话术生成出错: ' + error.message, role: 'ai' });
+                    addMessage({ type: 'text', status: '❌', content: '话术生成出错: ' + error.message, role: 'ai' });
                 }
             };
 
@@ -526,7 +582,7 @@
                 setCurrentStep(0);
                 setSubStep('');
                 setCompletedSteps([]);
-                addMessage({ type: 'text', content: '已停止生成', role: 'ai' });
+                addMessage({ type: 'text', status: '⏹', content: '已停止生成', role: 'ai' });
             };
 
             // Main flow
@@ -554,40 +610,35 @@
 
                 try {
                     // Step 1: Parse product
-                    setSubStep('正在获取商品页面...');
-                    addMessage({ type: 'loading', content: '正在解析商品信息...', role: 'ai' });
+                    setSubStep('正在解析商品...');
+                    addMessage({ type: 'loading', content: '', role: 'ai' });
 
                     const result = await callParseAPI(url);
                     parsedProductRef.current = result;
 
-                    setSubStep('提取商品卖点...');
-                    await sleep(300);
-
-                    setSubStep('生成模拟评论...');
-                    await sleep(300);
-
-                    setSubStep('');
                     setCompletedSteps(prev => [...prev, 1]);
 
-                    updateLastMessage({ type: 'text', content: '商品解析完成', role: 'ai' });
-                    await sleep(500);
+                    // 解析完成 - 先更新 loading 为完成消息
+                    updateLastMessage({
+                        type: 'text',
+                        status: '✅',
+                        content: '完成商品解析',
+                        role: 'ai'
+                    });
 
                     addMessage({
-                        type: 'card',
-                        cardType: 'product',
-                        data: {
-                            name: result.name,
-                            price: result.selling_points?.match(/\d+/)?.[0] || '',
-                            platform: '抖音',
-                            sales: ''
-                        },
-                        role: 'ai'
+                        type: 'lines',
+                        lines: [
+                            { status: '商品名称：', text: `<strong>${result.name}</strong>` },
+                            { status: '平台：', text: '抖音' },
+                            { status: '卖点：', text: result.selling_points || '' }
+                        ]
                     });
 
                     // Step 2: Call streaming API for OCR, structure and scripts
                     setCurrentStep(2);
                     setSubStep('正在识别商品图片...');
-                    addMessage({ type: 'loading', content: '正在处理中...', role: 'ai' });
+                    addMessage({ type: 'loading', content: '', role: 'ai' });
 
                     try {
                         const requestBody = {
@@ -608,6 +659,7 @@
                         let currentField = '';
                         let ocrTotal = 0;
                         let ocrTexts = [];
+                        let lastOcrIndex = 0;
 
                         // Process streaming events
                         while (true) {
@@ -623,41 +675,81 @@
                                 }
                                 if (line.startsWith('data: ')) {
                                     const dataStr = line.slice(6);
+                                    console.log('[SSE] 原始数据:', dataStr);
                                     try {
                                         const data = JSON.parse(dataStr);
+                                        console.log('[SSE] 解析后数据:', data);
 
-                                        // ocr_image event - create OCR card one by one (streaming)
-                                        if (data.index !== undefined) {
+                                        // ocr_start event - 开始识别图片（没有 index）
+                                        if (data.total !== undefined && data.index === undefined && data.ocr_text === undefined) {
+                                            setSubStep(`正在识别图片 1/${data.total}...`);
+                                            addMessage({
+                                                type: 'loading',
+                                                content: '',
+                                                role: 'ai'
+                                            });
+                                        }
+
+                                        // ocr_image event - 每张图片识别完成
+                                        if (data.index !== undefined && data.total !== undefined && data.ocr_text !== undefined) {
                                             ocrTotal = data.total;
+                                            lastOcrIndex = data.index;
                                             ocrTexts.push(data.ocr_text || '');
                                             setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
-                                            setMessages(prev => [...prev, {
-                                                id: `ocr-${data.index - 1}`,
-                                                type: 'card',
-                                                cardType: 'ocr_item',
-                                                data: {
-                                                    index: data.index,
-                                                    text: data.ocr_text || '（未识别到文字）',
-                                                    status: 'done'
-                                                },
+
+                                            // 先显示 loading，更新为结果
+                                            addMessage({
+                                                id: `ocr-loading-${data.index}`,
+                                                type: 'loading',
+                                                content: '',
                                                 role: 'ai'
-                                            }]);
+                                            });
+                                            await sleep(100);
+
+                                            // 更新 loading 为识别结果
+                                            updateLastMessage({
+                                                type: 'text',
+                                                status: '✅',
+                                                content: `图片${data.index}：${data.ocr_text || '（未识别到文字）'}`,
+                                                role: 'ai'
+                                            });
                                         }
 
                                         // ocr_complete event - all images processed
                                         if (data.combined_text !== undefined) {
                                             setCompletedSteps(prev => [...new Set([...prev, 2])]);
+                                            addMessage({
+                                                type: 'text',
+                                                status: '✅',
+                                                content: `OCR识别完成，共 ${lastOcrIndex} 张图片`,
+                                                role: 'ai'
+                                            });
                                         }
 
-                                        // ocr_summary_complete event - AI 提取结构化信息
+                                        // ocr_summary_complete event - AI 提取结构化信息（改为文字消息）
                                         if (data.features !== undefined) {
                                             setSubStep('AI 提取结构化信息...');
                                             addMessage({
-                                                type: 'card',
-                                                cardType: 'ocr_summary',
-                                                data: data,
+                                                type: 'text',
+                                                status: '✅',
+                                                content: 'AI汇总内容完成',
                                                 role: 'ai'
                                             });
+
+                                            // 改为文字消息形式显示 OCR 汇总
+                                            const lines = [];
+                                            if (data.material) lines.push({ status: '材质：', text: data.material });
+                                            if (data.features && data.features.length > 0) {
+                                                lines.push({ status: '特点：', text: data.features.join('、') });
+                                            }
+                                            if (data.applicable) lines.push({ status: '适用：', text: data.applicable });
+                                            if (data.colors) lines.push({ status: '颜色：', text: data.colors });
+                                            if (data.season) lines.push({ status: '季节：', text: data.season });
+                                            if (data.raw_summary) lines.push({ status: '详细汇总：', text: data.raw_summary });
+
+                                            if (lines.length > 0) {
+                                                addMessage({ type: 'lines', lines, role: 'ai' });
+                                            }
                                         }
 
                                         // structure_complete event
@@ -666,6 +758,14 @@
                                             setCurrentStep(3);
                                             setCompletedSteps(prev => [...new Set([...prev, 2, 3])]);
                                             setStructuredData(data);
+
+                                            addMessage({
+                                                type: 'text',
+                                                status: '✅',
+                                                content: '结构化提取完成',
+                                                role: 'ai'
+                                            });
+
                                             addMessage({
                                                 type: 'card',
                                                 cardType: 'structured',
@@ -727,6 +827,14 @@
                         setSubStep('');
                         setCompletedSteps(prev => [...prev, 2, 3, 4]);
 
+                        // 添加完成消息
+                        addMessage({
+                            type: 'text',
+                            status: '✅',
+                            content: '话术生成完成',
+                            role: 'ai'
+                        });
+
                         // Add final scripts card
                         addMessage({
                             type: 'card',
@@ -740,7 +848,7 @@
                             return;
                         }
                         console.error('Stream error:', error);
-                        addMessage({ type: 'text', content: '处理出错: ' + error.message, role: 'ai' });
+                        addMessage({ type: 'text', status: '❌', content: '处理出错: ' + error.message, role: 'ai' });
                     }
 
                 } catch (error) {
@@ -748,7 +856,7 @@
                         return;
                     }
                     console.error('Flow error:', error);
-                    addMessage({ type: 'text', content: '执行出错: ' + error.message, role: 'ai' });
+                    addMessage({ type: 'text', status: '❌', content: '执行出错: ' + error.message, role: 'ai' });
                 } finally {
                     if (btn) btn.disabled = false;
                     setIsGenerating(false);
@@ -766,18 +874,8 @@
                         </nav>
                     </header>
 
-                    {/* Progress Bar */}
-                    <ProgressBar currentStep={currentStep} completedSteps={completedSteps} subStep={subStep} />
-
-                    {/* Stop Button */}
-                    {isGenerating && (
-                        <button className="stop-btn" onClick={handleStop}>
-                            ⏹ 停止生成
-                        </button>
-                    )}
-
                     {/* Main Content */}
-                    <main className="main-container" style={{ paddingTop: currentStep > 0 ? '130px' : '80px' }}>
+                    <main className="main-container" style={{ paddingTop: currentStep > 0 ? '140px' : '80px' }}>
                         {messages.length === 0 ? (
                             <div className="initial-state">
                                 <div className="initial-icon">🔄</div>
