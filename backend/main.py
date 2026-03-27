@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 import os
 
 from backend.config import settings
-from backend.api import routes_products, routes_tasks, routes_test, routes_analysis, routes_production
+from backend.api import routes_products, routes_test, routes_analysis, routes_production
 
 app = FastAPI(
     title="AI Commerce Insight Generator",
@@ -29,7 +29,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(routes_products.router, prefix="/api", tags=["products"])
-app.include_router(routes_tasks.router, prefix="/api", tags=["tasks"])
 app.include_router(routes_test.router, prefix="/api", tags=["test"])
 app.include_router(routes_analysis.router, prefix="/api", tags=["analysis"])
 app.include_router(routes_production.router, prefix="/api", tags=["production"])

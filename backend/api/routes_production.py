@@ -17,7 +17,7 @@ from backend.services.production_service import ProductionService
 from backend.services.export_service import ExportService
 from backend.crawler.simple_parser import parse_product as crawl_product, detect_platform
 from backend.crawler.douyin_parser import parse_douyin_product
-from backend.ai_engine.structure_service import extract_product_structure
+from backend.ai_engine.structure_service import extract_product_structure, extract_ocr_summary
 from backend.ai_engine.ocr_service import get_ocr_service
 from backend.data.mock_data import get_mock_data
 
@@ -537,9 +537,42 @@ def generate_parse_ocr_stream_events(
                 'combined_text': combined_ocr_text
             }, ensure_ascii=False)
             yield f"event: ocr_complete\ndata: {ocr_complete_data}\n\n"
+
+            # Step 2.5: AI 提取 OCR 汇总结构化信息
+            logger.info(f"开始 OCR 汇总处理，图片数: {len(all_ocr_texts)}, 内容: {all_ocr_texts[:100]}")
+            yield "event: ocr_summary_start\ndata: {}\n\n"
+
+            try:
+                ocr_summary = extract_ocr_summary(all_ocr_texts)
+                logger.info(f"OCR 汇总结果: {ocr_summary}")
+            except Exception as e:
+                logger.error(f"OCR summary extraction failed: {e}")
+                ocr_summary = {
+                    "material": "",
+                    "features": [],
+                    "applicable": "",
+                    "colors": "",
+                    "season": "",
+                    "raw_summary": ""
+                }
+
+            ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
+            yield f"event: ocr_summary_complete\ndata: {ocr_summary_data}\n\n"
         else:
             ocr_complete_data = json.dumps({'total': 0, 'combined_text': ''}, ensure_ascii=False)
             yield f"event: ocr_complete\ndata: {ocr_complete_data}\n\n"
+
+            # 无图片时也发送空汇总
+            ocr_summary = {
+                "material": "",
+                "features": [],
+                "applicable": "",
+                "colors": "",
+                "season": "",
+                "raw_summary": ""
+            }
+            ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
+            yield f"event: ocr_summary_complete\ndata: {ocr_summary_data}\n\n"
 
         # Step 3: Extract structured info
         yield "event: structure_start\ndata: {}\n\n"

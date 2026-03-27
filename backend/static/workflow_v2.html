@@ -7,753 +7,21 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f5f5;
-            min-height: 100vh;
-        }
-
-        /* Header */
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-bottom: 1px solid #eee;
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 200;
-        }
-
-        .header h1 {
-            font-size: 20px;
-            font-weight: 600;
-            color: #111;
-        }
-
-        .header .nav {
-            display: flex;
-            gap: 16px;
-        }
-
-        .header .nav a {
-            color: #666;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .header .nav a:hover {
-            color: #667eea;
-        }
-
-        .header .nav a.active {
-            color: #667eea;
-            font-weight: 500;
-        }
-
-        /* Progress Bar */
-        .progress-bar {
-            position: fixed;
-            top: 60px;
-            left: 0;
-            right: 0;
-            background: white;
-            border-bottom: 1px solid #eee;
-            padding: 12px 24px;
-            z-index: 150;
-        }
-
-        .progress-steps {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            max-width: 600px;
-            margin: 0 auto;
-            gap: 0;
-        }
-
-        .progress-step {
-            display: flex;
-            align-items: center;
-            color: #ccc;
-            font-size: 13px;
-            transition: all 0.3s ease;
-        }
-
-        .progress-step.active {
-            color: #667eea;
-            font-weight: 500;
-        }
-
-        .progress-step.completed {
-            color: #10b981;
-        }
-
-        .progress-step-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 2px solid currentColor;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            margin-right: 6px;
-            transition: all 0.3s ease;
-        }
-
-        .progress-step.completed .progress-step-icon {
-            background: #10b981;
-            border-color: #10b981;
-            color: white;
-        }
-
-        .progress-step.active .progress-step-icon {
-            border-color: #667eea;
-            background: #667eea;
-            color: white;
-            animation: pulse 1.5s infinite;
-        }
-
-        .progress-step-label {
-            white-space: nowrap;
-        }
-
-        .progress-connector {
-            width: 40px;
-            height: 2px;
-            background: #eee;
-            margin: 0 8px;
-        }
-
-        .progress-connector.completed {
-            background: #10b981;
-        }
-
-        .sub-step-indicator {
-            text-align: center;
-            margin-top: 8px;
-            font-size: 12px;
-            color: #666;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .sub-step-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #667eea;
-            animation: pulse 1s infinite;
-        }
-
-        /* Stop Button */
-        .stop-btn {
-            position: fixed;
-            top: 70px;
-            right: 24px;
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            z-index: 160;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .stop-btn:hover {
-            background: #dc2626;
-            transform: scale(1.05);
-        }
-
-        /* Main Container */
-        .main-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 80px 24px 120px;
-            min-height: 100vh;
-        }
-
-        /* Messages Container */
-        .messages-container {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        /* Message Bubble */
-        .message-wrapper {
-            display: flex;
-            gap: 12px;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .message-wrapper.user {
-            flex-direction: row-reverse;
-        }
-
-        .message-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
-
-        .message-avatar.ai {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .message-avatar.user {
-            background: #111;
-        }
-
-        .message-content {
-            max-width: 70%;
-        }
-
-        .message-bubble {
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 14px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .message-wrapper:not(.user) .message-bubble {
-            background: white;
-            border: 1px solid #eee;
-            border-top-left-radius: 4px;
-        }
-
-        .message-wrapper.user .message-bubble {
-            background: #111;
-            color: white;
-            border-top-right-radius: 4px;
-        }
-
-        /* Typing Cursor */
-        .typing-cursor {
-            display: inline-block;
-            width: 2px;
-            height: 16px;
-            background: #667eea;
-            margin-left: 2px;
-            animation: blink 1s infinite;
-            vertical-align: text-bottom;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-
-        /* Loading Skeleton */
-        .loading-bubble {
-            background: white;
-            border: 1px solid #eee;
-            border-top-left-radius: 4px;
-            padding: 16px;
-            min-width: 120px;
-        }
-
-        .loading-dots {
-            display: flex;
-            gap: 4px;
-        }
-
-        .loading-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ddd;
-            animation: pulse 1.4s infinite ease-in-out;
-        }
-
-        .loading-dot:nth-child(1) { animation-delay: 0s; }
-        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
-        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes pulse {
-            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-            40% { transform: scale(1); opacity: 1; }
-        }
-
-        /* Cards */
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            max-width: 70%;
-            margin-left: 48px;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .card-tag {
-            padding: 4px 10px;
-            background: #667eea;
-            color: white;
-            font-size: 11px;
-            font-weight: 500;
-            border-radius: 4px;
-        }
-
-        .card-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .ai-badge {
-            margin-left: auto;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-size: 11px;
-            font-weight: 500;
-            border-radius: 12px;
-        }
-
-        .ai-icon {
-            font-size: 12px;
-        }
-
-        .structured-field input.edited {
-            border-color: #667eea;
-            background: #f8f6ff;
-        }
-
-        .structured-field label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .reset-btn {
-            background: none;
-            border: none;
-            color: #667eea;
-            cursor: pointer;
-            font-size: 12px;
-            padding: 2px 4px;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-
-        .reset-btn:hover {
-            background: #f0f0ff;
-        }
-
-        /* Product Card */
-        .product-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .product-item {
-            padding: 12px;
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-
-        .product-item .label {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 4px;
-        }
-
-        .product-item .value {
-            font-size: 14px;
-            font-weight: 500;
-            color: #333;
-        }
-
-        /* OCR Card */
-        .ocr-text {
-            padding: 14px;
-            background: #f9f9f9;
-            border-radius: 8px;
-            font-size: 14px;
-            line-height: 1.8;
-            color: #333;
-        }
-
-        .ocr-results {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .ocr-item {
-            background: #f9f9f9;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .ocr-item-header {
-            background: #667eea;
-            color: white;
-            padding: 8px 14px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .ocr-item-text {
-            padding: 14px;
-            font-size: 14px;
-            line-height: 1.8;
-            color: #333;
-            white-space: pre-wrap;
-        }
-
-        /* OCR Summary Card */
-        .ocr-summary {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .ocr-summary-item {
-            background: #f9f9f9;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .ocr-summary-header {
-            background: #667eea;
-            color: white;
-            padding: 8px 14px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .ocr-summary-text {
-            padding: 14px;
-            font-size: 14px;
-            line-height: 1.8;
-            color: #333;
-            white-space: pre-wrap;
-        }
-
-        /* Structured Card */
-        .structured-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .structured-field {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .structured-field label {
-            font-size: 12px;
-            font-weight: 500;
-            color: #666;
-        }
-
-        .structured-field input {
-            padding: 10px 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            font-size: 13px;
-            font-family: inherit;
-        }
-
-        .structured-field input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn-confirm {
-            margin-top: 16px;
-            padding: 12px 24px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-confirm:hover {
-            background: #5a6fd6;
-        }
-
-        /* Scripts Card */
-        .script-section {
-            margin-bottom: 16px;
-        }
-
-        .script-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .script-section-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #667eea;
-            margin-bottom: 8px;
-        }
-
-        .script-section-content {
-            padding: 12px 14px;
-            background: #f9f9f9;
-            border-radius: 8px;
-            font-size: 14px;
-            line-height: 1.7;
-            color: #333;
-        }
-
-        .script-section:last-child .script-section-content {
-            background: #fff5f5;
-            border-left: 3px solid #ff4757;
-        }
-
-        /* Input Section */
-        .input-section-wrapper {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            padding: 16px 24px;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
-            z-index: 100;
-            display: flex;
-            justify-content: center;
-        }
-
-        .input-container {
-            max-width: 900px;
-            width: 95%;
-        }
-
-        .input-row {
-            display: flex;
-            gap: 12px;
-        }
-
-        .input-row input {
-            flex: 1;
-            padding: 14px 16px;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        .input-row input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn-start {
-            padding: 14px 24px;
-            background: #111;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        .btn-start:hover {
-            opacity: 0.85;
-        }
-
-        .btn-start:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        /* Initial State */
-        .initial-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 60vh;
-            text-align: center;
-        }
-
-        .initial-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-
-        .initial-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .initial-hint {
-            font-size: 14px;
-            color: #999;
-        }
-
-        /* Continue Button */
-        .continue-btn {
-            margin-top: 12px;
-            padding: 10px 20px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        .continue-btn:hover {
-            background: #5a6fd6;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/workflow_v2.css">
 </head>
 <body>
     <div id="root"></div>
 
+    <!-- Load utility functions (no JSX, no Babel needed) -->
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/api.js"></script>
+
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        // ===== React Components (use Utils and API from window) =====
 
-        // ===== Utility Functions =====
-        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        const { sleep, generateId, formatScriptData, getSectionLabel, createEmptyScript } = window.Utils;
+        const { callParseAPI, callParseStreamAPI } = window.API;
 
-        // ===== Real API Functions =====
-        const callParseAPI = async (url) => {
-            const response = await fetch('/api/parse-product', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
-            });
-            if (!response.ok) throw new Error('Parse failed');
-            return response.json();
-        };
-
-        // New streaming API for progressive OCR
-        const callParseStreamAPI = async (params) => {
-            const response = await fetch('/api/parse-product-stream', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(params)
-            });
-            if (!response.ok) throw new Error('Parse failed');
-            return response;
-        };
-
-        const callOCRAPI = async (imageUrl) => {
-            const response = await fetch('/api/ocr-from-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image_url: imageUrl })
-            });
-            if (!response.ok) throw new Error('OCR failed');
-            return response.json();
-        };
-
-        const callScriptsAPI = async (params) => {
-            const query = new URLSearchParams({
-                product_url: params.product_url || '',
-                product_name: params.product_name || '',
-                product_info: params.product_info || '',
-                selling_points: params.selling_points || '',
-                structured: JSON.stringify(params.structured || {}),
-                comments: JSON.stringify(params.comments || [])
-            });
-            const response = await fetch(`/api/generate-scripts-sse?${query}`, { method: 'GET' });
-            if (!response.ok) throw new Error('Scripts failed');
-            return response;
-        };
-
-        // ===== Mock API Functions (for testing) =====
-        const mockParseAPI = async () => {
-            await sleep(1200);
-            return {
-                name: "夏季儿童纯棉短袖套装",
-                price: "39.9",
-                platform: "抖音",
-                sales: "2.3万"
-            };
-        };
-
-        const mockOCRAPI = async () => {
-            await sleep(1500);
-            return "纯棉材质，透气吸汗，适合夏季穿着。100%纯棉面料，柔软舒适不起球。多个颜色可选，男童女童都适合。";
-        };
-
-        const mockStructuredAPI = async () => {
-            await sleep(1000);
-            return {
-                title: "夏季儿童纯棉套装",
-                material: "100%纯棉",
-                function: "透气吸汗、柔软舒适",
-                scene: "夏季日常、上学",
-                target: "3-8岁儿童",
-                advantage: "纯棉不起球，多色可选"
-            };
-        };
-
-        const mockScriptsAPI = async () => {
-            await sleep(2000);
-            return {
-                opening_hook: "家人们，这不快夏天了嘛，给孩子买衣服最愁人了",
-                pain_point: "孩子皮肤嫩，普通面料穿一会儿就闷出汗",
-                solution: "我给孩子换了这个纯棉套装，真的透气",
-                proof: "邻居家小孩穿了一个夏天，洗了好几次还是软乎乎的",
-                offer: "这波活动价39.9，比实体店便宜一半"
-            };
-        };
-
-        // ===== Components =====
-
-        // Progress Bar Component
         function ProgressBar({ currentStep, completedSteps, subStep }) {
             const steps = [
                 { id: 1, label: '解析商品' },
@@ -795,8 +63,7 @@
             );
         }
 
-        // Loading Bubble Component
-        function LoadingBubble({ text }) {
+        function LoadingBubble() {
             return (
                 <div className="message-wrapper">
                     <div className="message-avatar ai">🤖</div>
@@ -811,7 +78,6 @@
             );
         }
 
-        // Product Card Component
         function ProductCard({ data }) {
             return (
                 <div className="card">
@@ -841,44 +107,114 @@
             );
         }
 
-        // OCR Card Component
-        function OCRCard({ data }) {
-            // Handle both string and object formats
-            const isObject = typeof data === 'object' && data !== null && data.results !== undefined;
+        function OCRItemCard({ data }) {
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <span className="card-tag">OCR</span>
+                        <span className="card-title">图片 {data.index}</span>
+                    </div>
+                    <div className="ocr-text">
+                        {data.status === 'loading' ? '识别中...' : data.text}
+                    </div>
+                </div>
+            );
+        }
 
-            if (isObject) {
-                const { results, current, total } = data;
+        function OCRSummaryCard({ data }) {
+            const isStructuredFormat = data.material !== undefined || data.features !== undefined;
+
+            if (isStructuredFormat) {
                 return (
                     <div className="card">
                         <div className="card-header">
                             <span className="card-tag">OCR</span>
-                            <span className="card-title">图片文字识别 ({current}/{total})</span>
+                            <span className="card-title">AI 识别结果汇总</span>
+                            <span className="ai-badge">
+                                <span className="ai-icon">⚡</span> AI 分析
+                            </span>
                         </div>
-                        <div className="ocr-results">
-                            {results.map((text, idx) => (
-                                <div key={idx} className="ocr-item">
-                                    <div className="ocr-item-header">图片 {idx + 1}</div>
-                                    <div className="ocr-item-text">{text || '识别中...'}</div>
+                        <div className="ocr-summary">
+                            {data.material && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📦 材质</div>
+                                    <div className="ocr-summary-text">{data.material}</div>
                                 </div>
-                            ))}
+                            )}
+
+                            {data.features && data.features.length > 0 && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">✨ 产品特点</div>
+                                    <div className="ocr-summary-text">
+                                        <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
+                                            {data.features.map((feature, idx) => (
+                                                <span key={idx} style={{
+                                                    background: '#f0f0ff',
+                                                    color: '#667eea',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '13px'
+                                                }}>
+                                                    {feature}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {data.applicable && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">👥 适用人群/场景</div>
+                                    <div className="ocr-summary-text">{data.applicable}</div>
+                                </div>
+                            )}
+
+                            {data.colors && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🎨 颜色</div>
+                                    <div className="ocr-summary-text">{data.colors}</div>
+                                </div>
+                            )}
+
+                            {data.season && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🌡 适用季节</div>
+                                    <div className="ocr-summary-text">{data.season}</div>
+                                </div>
+                            )}
+
+                            {data.raw_summary && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📋 详细汇总</div>
+                                    <div className="ocr-summary-text" style={{whiteSpace: 'pre-wrap'}}>
+                                        {data.raw_summary}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
             }
 
-            // Legacy string format
             return (
                 <div className="card">
                     <div className="card-header">
                         <span className="card-tag">OCR</span>
-                        <span className="card-title">图片文字识别</span>
+                        <span className="card-title">识别结果汇总</span>
                     </div>
-                    <div className="ocr-text">{data}</div>
+                    <div className="ocr-summary">
+                        {data.items && data.items.map((item, idx) => (
+                            <div key={idx} className="ocr-summary-item">
+                                <div className="ocr-summary-header">图片 {item.index}</div>
+                                <div className="ocr-summary-text">{item.text}</div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             );
         }
 
-        // Structured Card Component
         function StructuredCard({ data, onChange, onConfirm, showConfirm }) {
             const [editedFields, setEditedFields] = React.useState({});
             const [originalData, setOriginalData] = React.useState({...data});
@@ -889,15 +225,22 @@
             }, [data]);
 
             const handleFieldChange = (key, value) => {
-                const newData = {...data, [key]: value};
                 onChange(key, value);
                 setEditedFields(prev => ({...prev, [key]: value !== originalData[key]}));
             };
 
             const handleReset = (key) => {
-                const newData = {...data, [key]: originalData[key]};
                 onChange(key, originalData[key]);
                 setEditedFields(prev => ({...prev, [key]: false}));
+            };
+
+            const fieldLabels = {
+                title: '商品标题',
+                material: '材质',
+                function: '功能',
+                scene: '使用场景',
+                target: '目标人群',
+                advantage: '核心优势'
             };
 
             return (
@@ -913,12 +256,7 @@
                         {Object.keys(data).map(key => (
                             <div className="structured-field" key={key}>
                                 <label>
-                                    {key === 'title' ? '商品标题' :
-                                     key === 'material' ? '材质' :
-                                     key === 'function' ? '功能' :
-                                     key === 'scene' ? '使用场景' :
-                                     key === 'target' ? '目标人群' :
-                                     key === 'advantage' ? '核心优势' : key}
+                                    {fieldLabels[key] || key}
                                     {editedFields[key] && (
                                         <button
                                             className="reset-btn"
@@ -946,7 +284,6 @@
             );
         }
 
-        // Scripts Card Component
         function ScriptsCard({ data }) {
             const sections = [
                 { key: 'opening_hook', label: '开头吸引' },
@@ -972,67 +309,16 @@
             );
         }
 
-        // OCR Item Card Component (单张图片 OCR 卡片)
-        function OCRItemCard({ data }) {
-            return (
-                <div className="card">
-                    <div className="card-header">
-                        <span className="card-tag">OCR</span>
-                        <span className="card-title">图片 {data.index}</span>
-                    </div>
-                    <div className="ocr-text">
-                        {data.status === 'loading' ? '识别中...' : data.text}
-                    </div>
-                </div>
-            );
-        }
-
-        // OCR Summary Card Component (OCR 汇总卡片)
-        function OCRSummaryCard({ data }) {
-            return (
-                <div className="card">
-                    <div className="card-header">
-                        <span className="card-tag">OCR</span>
-                        <span className="card-title">识别结果汇总 ({data.total}张图片)</span>
-                    </div>
-                    <div className="ocr-summary">
-                        {data.items && data.items.map((item, idx) => (
-                            <div key={idx} className="ocr-summary-item">
-                                <div className="ocr-summary-header">图片 {item.index}</div>
-                                <div className="ocr-summary-text">{item.text}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-
-        // Message Bubble Component
         function MessageBubble({ message }) {
             const isUser = message.role === 'user';
             const isLoading = message.type === 'loading';
 
             if (isLoading) {
-                return (
-                    <div className="message-wrapper">
-                        <div className="message-avatar ai">🤖</div>
-                        <div className="loading-bubble">
-                            <div className="loading-dots">
-                                <div className="loading-dot"></div>
-                                <div className="loading-dot"></div>
-                                <div className="loading-dot"></div>
-                            </div>
-                        </div>
-                    </div>
-                );
+                return <LoadingBubble />;
             }
 
             if (message.cardType === 'product') {
                 return <ProductCard data={message.data} />;
-            }
-
-            if (message.cardType === 'ocr') {
-                return <OCRCard data={message.data} />;
             }
 
             if (message.cardType === 'ocr_item') {
@@ -1072,14 +358,16 @@
         }
 
         // ===== Main App Component =====
+        const { useState, useEffect, useRef } = React;
+
         function App() {
             const [messages, setMessages] = useState([]);
             const [input, setInput] = useState('');
             const [isTyping, setIsTyping] = useState(false);
             const [isWaitingUser, setIsWaitingUser] = useState(false);
             const [structuredData, setStructuredData] = useState({});
-            const [currentStep, setCurrentStep] = useState(0); // 0: idle, 1: parsing, 2: ocr, 3: structured, 4: scripts
-            const [subStep, setSubStep] = useState(''); // Detailed sub-step description
+            const [currentStep, setCurrentStep] = useState(0);
+            const [subStep, setSubStep] = useState('');
             const [completedSteps, setCompletedSteps] = useState([]);
             const [isGenerating, setIsGenerating] = useState(false);
             const parsedProductRef = useRef(null);
@@ -1090,9 +378,6 @@
             useEffect(() => {
                 bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
             }, [messages]);
-
-            // Generate unique ID
-            const generateId = () => Math.random().toString(36).substr(2, 9);
 
             // Add message
             const addMessage = (message) => {
@@ -1113,23 +398,9 @@
                 });
             };
 
-            // Stream text with typewriter effect
-            const streamText = async (text, delay = 20) => {
-                setIsTyping(true);
-                let current = '';
-                for (let char of text) {
-                    current += char;
-                    updateLastMessage({ content: current, isTyping: true });
-                    await sleep(delay);
-                }
-                updateLastMessage({ content: current, isTyping: false });
-                setIsTyping(false);
-            };
-
             // Handle structured field change
             const handleStructuredChange = (key, value) => {
                 setStructuredData(prev => ({ ...prev, [key]: value }));
-                // Update the last message's data
                 setMessages(prev => {
                     const newMessages = [...prev];
                     const lastIdx = newMessages.length - 1;
@@ -1149,12 +420,10 @@
                 setCurrentStep(4);
                 setSubStep('正在生成话术...');
 
-                // Get current structured data and product data
                 const currentStructured = structuredData;
                 const productData = parsedProductRef.current || {};
 
                 try {
-                    // Call scripts generation API
                     const query = new URLSearchParams({
                         product_url: '',
                         product_name: productData.name || '',
@@ -1171,13 +440,7 @@
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
 
-                    let script = {
-                        opening_hook: [],
-                        pain_point: [],
-                        solution: [],
-                        proof: [],
-                        offer: []
-                    };
+                    let script = createEmptyScript();
                     let currentField = '';
 
                     while (true) {
@@ -1208,20 +471,8 @@
                                         }
                                         script[data.field].push(data.content);
 
-                                        const formatted = {};
-                                        Object.keys(script).forEach(key => {
-                                            formatted[key] = script[key].join('').replace(/。/g, '。\n');
-                                        });
-
-                                        const sectionLabel = {
-                                            opening_hook: '开头吸引',
-                                            pain_point: '痛点描述',
-                                            solution: '解决方案',
-                                            proof: '证明案例',
-                                            offer: '促单话术'
-                                        }[currentField] || currentField;
-
-                                        setSubStep(`正在生成${sectionLabel}...`);
+                                        const formatted = formatScriptData(script);
+                                        setSubStep(`正在生成${getSectionLabel(currentField)}...`);
 
                                         updateLastMessage({
                                             type: 'card',
@@ -1248,7 +499,6 @@
                         throw new Error('话术生成失败');
                     }
 
-                    // Ensure final step is marked complete
                     setCompletedSteps(prev => [...new Set([...prev, 4])]);
                     setSubStep('');
 
@@ -1279,171 +529,6 @@
                 addMessage({ type: 'text', content: '已停止生成', role: 'ai' });
             };
 
-            // Continue flow after user confirmation
-            const handleContinue = async () => {
-                setIsWaitingUser(false);
-                setCurrentStep(4);
-
-                // Get the parsed product data
-                const productData = parsedProductRef.current || {};
-
-                // Use streaming API for OCR and script generation
-                setSubStep('正在识别商品图片...');
-                addMessage({ type: 'loading', content: '正在处理中...', role: 'ai' });
-
-                try {
-                    const requestBody = {
-                        name: productData.name || '',
-                        selling_points: productData.selling_points || '',
-                        images: productData.images || [],
-                        comments: productData.comments || []
-                    };
-
-                    const response = await fetch('/api/parse-product-stream', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(requestBody)
-                    });
-
-                    if (!response.ok) throw new Error('处理失败');
-
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-
-                    let script = {
-                        opening_hook: [],
-                        pain_point: [],
-                        solution: [],
-                        proof: [],
-                        offer: []
-                    };
-                    let currentField = '';
-                    let ocrResults = [];
-                    let ocrTotal = 0;
-                    let structuredData = {};
-                    let insightsData = {};
-
-                    // Process streaming events
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-
-                        const text = decoder.decode(value);
-                        const lines = text.split('\n');
-
-                        for (const line of lines) {
-                            if (line.startsWith('event:')) {
-                                const eventType = line.replace('event:', '').trim();
-                                continue;
-                            }
-                            if (line.startsWith('data: ')) {
-                                const dataStr = line.slice(6);
-                                try {
-                                    const data = JSON.parse(dataStr);
-
-                                    // Handle different event types
-                                    if (data.name !== undefined) {
-                                        // parse_complete event - update product info
-                                        updateLastMessage({ type: 'text', content: '商品信息已获取', role: 'ai' });
-                                        await sleep(300);
-                                    }
-
-                                    // ocr_image event - create OCR card one by one (streaming)
-                                    if (data.index !== undefined) {
-                                        setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
-                                        // Add new OCR card with content directly (streaming)
-                                        setMessages(prev => [...prev, {
-                                            id: `ocr-${data.index - 1}`,
-                                            type: 'card',
-                                            cardType: 'ocr_item',
-                                            data: {
-                                                index: data.index,
-                                                text: data.ocr_text || '（未识别到文字）',
-                                                status: 'done'
-                                            },
-                                            role: 'ai'
-                                        }]);
-                                    }
-
-                                    // ocr_complete event - all images processed
-                                    if (data.combined_text !== undefined) {
-                                        setCompletedSteps(prev => [...new Set([...prev, 2])]);
-                                    }
-
-                                    if (data.pain_points !== undefined) {
-                                        // insights_complete event
-                                        insightsData = data;
-                                        setSubStep('正在分析用户洞察...');
-                                        await sleep(300);
-                                    }
-
-                                    if (data.field && data.content) {
-                                        // script_chunk event - use array to cache content
-                                        currentField = data.field;
-                                        if (!script[data.field]) {
-                                            script[data.field] = [];
-                                        }
-                                        script[data.field].push(data.content);
-
-                                        // Convert arrays to joined strings for display
-                                        const formatted = {};
-                                        Object.keys(script).forEach(key => {
-                                            formatted[key] = script[key].join('').replace(/。/g, '。\n');
-                                        });
-
-                                        // Update last message with streaming content
-                                        const sectionLabel = {
-                                            opening_hook: '开头吸引',
-                                            pain_point: '痛点描述',
-                                            solution: '解决方案',
-                                            proof: '证明案例',
-                                            offer: '促单话术'
-                                        }[currentField] || currentField;
-
-                                        updateLastMessage({
-                                            type: 'card',
-                                            cardType: 'scripts',
-                                            data: formatted,
-                                            role: 'ai'
-                                        });
-                                    }
-
-                                    if (data.label && !data.content) {
-                                        // script_section event - new section started
-                                        currentField = data.field;
-                                        script[currentField] = [];
-                                        setSubStep(`正在生成${data.label}...`);
-                                    }
-
-                                } catch (e) {
-                                    // Not JSON, skip
-                                }
-                            }
-                        }
-                    }
-
-                    if (Object.keys(script).length === 0) {
-                        // Fallback to original API if stream fails
-                        throw new Error('流式处理失败');
-                    }
-
-                    setSubStep('');
-                    setCompletedSteps(prev => [...prev, 4]);
-
-                    // Add scripts card
-                    addMessage({
-                        type: 'card',
-                        cardType: 'scripts',
-                        data: script,
-                        role: 'ai'
-                    });
-
-                } catch (error) {
-                    console.error('Stream processing error:', error);
-                    addMessage({ type: 'text', content: '处理出错: ' + error.message, role: 'ai' });
-                }
-            };
-
             // Main flow
             const runFlow = async () => {
                 if (!input.trim()) return;
@@ -1468,7 +553,7 @@
                 parsedProductRef.current = null;
 
                 try {
-                    // Step 1: Parse product - sub-steps
+                    // Step 1: Parse product
                     setSubStep('正在获取商品页面...');
                     addMessage({ type: 'loading', content: '正在解析商品信息...', role: 'ai' });
 
@@ -1512,27 +597,17 @@
                             comments: result.comments || []
                         };
 
-                        const response = await fetch('/api/parse-product-stream', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(requestBody)
-                        });
+                        const response = await callParseStreamAPI(requestBody);
 
                         if (!response.ok) throw new Error('处理失败');
 
                         const reader = response.body.getReader();
                         const decoder = new TextDecoder();
 
-                        let script = {
-                            opening_hook: [],
-                            pain_point: [],
-                            solution: [],
-                            proof: [],
-                            offer: []
-                        };
+                        let script = createEmptyScript();
                         let currentField = '';
                         let ocrTotal = 0;
-                        let ocrTexts = []; // Store all OCR texts for summary
+                        let ocrTexts = [];
 
                         // Process streaming events
                         while (true) {
@@ -1553,10 +628,9 @@
 
                                         // ocr_image event - create OCR card one by one (streaming)
                                         if (data.index !== undefined) {
-                                            ocrTotal = data.total; // Track total
-                                            ocrTexts.push(data.ocr_text || ''); // Collect OCR text
+                                            ocrTotal = data.total;
+                                            ocrTexts.push(data.ocr_text || '');
                                             setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
-                                            // Add new OCR card with content directly (streaming)
                                             setMessages(prev => [...prev, {
                                                 id: `ocr-${data.index - 1}`,
                                                 type: 'card',
@@ -1573,24 +647,17 @@
                                         // ocr_complete event - all images processed
                                         if (data.combined_text !== undefined) {
                                             setCompletedSteps(prev => [...new Set([...prev, 2])]);
+                                        }
 
-                                            // Add OCR summary card with all collected texts
-                                            if (ocrTexts.length > 0) {
-                                                const summaryText = ocrTexts.join('\n\n');
-                                                addMessage({
-                                                    type: 'card',
-                                                    cardType: 'ocr_summary',
-                                                    data: {
-                                                        total: ocrTexts.length,
-                                                        text: summaryText,
-                                                        items: ocrTexts.map((text, idx) => ({
-                                                            index: idx + 1,
-                                                            text: text || '（未识别到文字）'
-                                                        }))
-                                                    },
-                                                    role: 'ai'
-                                                });
-                                            }
+                                        // ocr_summary_complete event - AI 提取结构化信息
+                                        if (data.features !== undefined) {
+                                            setSubStep('AI 提取结构化信息...');
+                                            addMessage({
+                                                type: 'card',
+                                                cardType: 'ocr_summary',
+                                                data: data,
+                                                role: 'ai'
+                                            });
                                         }
 
                                         // structure_complete event
@@ -1609,9 +676,9 @@
                                                 showConfirm: true
                                             });
 
-                                            // Pause and wait for user confirmation before generating scripts
+                                            // Pause and wait for user confirmation
                                             setIsWaitingUser(true);
-                                            return; // Stop processing, wait for user
+                                            return;
                                         }
 
                                         // script_chunk event
@@ -1622,20 +689,8 @@
                                             }
                                             script[data.field].push(data.content);
 
-                                            const formatted = {};
-                                            Object.keys(script).forEach(key => {
-                                                formatted[key] = script[key].join('').replace(/。/g, '。\n');
-                                            });
-
-                                            const sectionLabel = {
-                                                opening_hook: '开头吸引',
-                                                pain_point: '痛点描述',
-                                                solution: '解决方案',
-                                                proof: '证明案例',
-                                                offer: '促单话术'
-                                            }[currentField] || currentField;
-
-                                            setSubStep(`正在生成${sectionLabel}...`);
+                                            const formatted = formatScriptData(script);
+                                            setSubStep(`正在生成${getSectionLabel(currentField)}...`);
 
                                             updateLastMessage({
                                                 type: 'card',
@@ -1690,7 +745,7 @@
 
                 } catch (error) {
                     if (error.name === 'AbortError') {
-                        return; // Stopped by user
+                        return;
                     }
                     console.error('Flow error:', error);
                     addMessage({ type: 'text', content: '执行出错: ' + error.message, role: 'ai' });
