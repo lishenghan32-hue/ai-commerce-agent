@@ -242,7 +242,7 @@
                 <div className="card">
                     <div className="card-header">
                         <span className="card-tag">结构化</span>
-                        <span className="card-title">卖点信息提取</span>
+                        <span className="card-title">商品信息提取</span>
                         <span className="ai-badge">
                             <span className="ai-icon">⚡</span> AI 推荐
                         </span>
@@ -565,10 +565,11 @@
 
                 try {
                     // Step 1: Parse product
-                    setSubStep('正在解析商品...');
+                    setSubStep('正在解析商品');
                     addMessage({ type: 'loading', text: '正在解析商品', role: 'ai' });
 
                     const result = await callParseAPI(url);
+                    console.log('[商品解析结果]', result);
                     parsedProductRef.current = result;
 
                     setCompletedSteps(prev => [...prev, 1]);
@@ -585,14 +586,13 @@
                         type: 'lines',
                         lines: [
                             { status: '商品名称：', text: `<strong>${result.name}</strong>` },
-                            { status: '平台：', text: '抖音' },
-                            { status: '卖点：', text: result.selling_points || '' }
+                            { status: '平台：', text: '抖音' }
                         ]
                     });
 
                     // Step 2: Call streaming API for OCR, structure and scripts
                     setCurrentStep(2);
-                    setSubStep('正在识别商品图片...');
+                    setSubStep('正在识别商品图片');
                     addMessage({ type: 'loading', content: '', role: 'ai' });
 
                     try {
@@ -637,10 +637,11 @@
 
                                         // ocr_start event - 开始识别图片（没有 index）
                                         if (data.total !== undefined && data.index === undefined && data.ocr_text === undefined) {
-                                            setSubStep(`正在识别图片 1/${data.total}...`);
-                                            addMessage({
+                                            setSubStep(`正在识别图片 1/${data.total}`);
+                                            // 更新"正在识别商品图片"的 loading 为"正在识别第1张..."
+                                            updateLastMessage({
                                                 type: 'loading',
-                                                content: '',
+                                                text: '正在识别第 1 张图片',
                                                 role: 'ai'
                                             });
                                         }
@@ -650,44 +651,52 @@
                                             ocrTotal = data.total;
                                             lastOcrIndex = data.index;
                                             ocrTexts.push(data.ocr_text || '');
-                                            setSubStep(`正在识别第 ${data.index}/${data.total} 张图片...`);
+                                            setSubStep(`正在识别第 ${data.index}/${data.total} 张图片`);
 
-                                            // 先显示 loading，更新为结果
-                                            addMessage({
-                                                id: `ocr-loading-${data.index}`,
-                                                type: 'loading',
-                                                content: '',
-                                                role: 'ai'
-                                            });
-                                            await sleep(100);
-
-                                            // 更新 loading 为识别结果
+                                            // 更新"正在识别第X张图片"的 loading 为结果
                                             updateLastMessage({
                                                 type: 'text',
                                                 status: '✅',
                                                 content: `图片${data.index}：${data.ocr_text || '（未识别到文字）'}`,
                                                 role: 'ai'
                                             });
+
+                                            // 如果还有下一张图片，添加新的 loading 显示下一张状态
+                                            if (data.index < data.total) {
+                                                addMessage({
+                                                    type: 'loading',
+                                                    text: `正在识别第 ${data.index + 1} 张图片`,
+                                                    role: 'ai'
+                                                });
+                                            }
                                         }
 
                                         // ocr_complete event - all images processed
                                         if (data.combined_text !== undefined) {
                                             setCompletedSteps(prev => [...new Set([...prev, 2])]);
-                                            addMessage({
+                                            // 更新 OCR 开始的 loading 为完成消息
+                                            updateLastMessage({
                                                 type: 'text',
                                                 status: '✅',
                                                 content: `OCR识别完成，共 ${lastOcrIndex} 张图片`,
                                                 role: 'ai'
                                             });
+                                            // 添加 AI 汇总 loading
+                                            addMessage({
+                                                type: 'loading',
+                                                text: '正在AI汇总',
+                                                role: 'ai'
+                                            });
                                         }
 
-                                        // ocr_summary_complete event - AI 提取结构化信息（改为文字消息）
+                                        // ocr_summary_complete event - AI 提取结构化信息
                                         if (data.features !== undefined) {
-                                            setSubStep('AI 提取结构化信息...');
-                                            addMessage({
+                                            setSubStep('AI 提取结构化信息');
+                                            // 更新 loading 为 AI 汇总完成消息
+                                            updateLastMessage({
                                                 type: 'text',
                                                 status: '✅',
-                                                content: 'AI汇总内容完成',
+                                                content: 'AI汇总完成',
                                                 role: 'ai'
                                             });
 
@@ -705,6 +714,13 @@
                                             if (lines.length > 0) {
                                                 addMessage({ type: 'lines', lines, role: 'ai' });
                                             }
+
+                                            // 添加结构化提取 loading
+                                            addMessage({
+                                                type: 'loading',
+                                                text: '正在结构化提取信息...',
+                                                role: 'ai'
+                                            });
                                         }
 
                                         // structure_complete event
@@ -714,7 +730,8 @@
                                             setCompletedSteps(prev => [...new Set([...prev, 2, 3])]);
                                             setStructuredData(data);
 
-                                            addMessage({
+                                            // 更新 loading 为完成消息
+                                            updateLastMessage({
                                                 type: 'text',
                                                 status: '✅',
                                                 content: '结构化提取完成',

@@ -355,24 +355,12 @@ def parse_product(request: ParseProductRequest):
         logger.info("Detected Douyin URL, using Playwright...")
         try:
             parsed = parse_douyin_product(url)
-            if parsed.get("name") or parsed.get("selling_points") or parsed.get("ocr_text"):
-                # Use AI to enhance/summarize from OCR text
-                if parsed.get("ocr_text"):
-                    try:
-                        ai_summary = production_service.ai_service.summarize_product_info(
-                            parsed.get("name", ""),
-                            parsed.get("ocr_text", ""),
-                            parsed.get("selling_points", "")
-                        )
-                        if ai_summary.get("product_name"):
-                            parsed["name"] = ai_summary["product_name"]
-                        if ai_summary.get("selling_points"):
-                            parsed["selling_points"] = ai_summary["selling_points"]
-                    except Exception as e:
-                        logger.error(f"AI summarization failed: {e}")
+            logger.info(f"parse_douyin_product 返回: name={parsed.get('name')}")
+            # 名称和卖点都使用原始提取的，不经过 AI
+            # AI 汇总在后续流程中会有详细结构化信息
 
-                # Extract structured product info
-                try:
+            # Extract structured product info
+            try:
                     structured = extract_product_structure(
                         parsed.get("name", ""),
                         parsed.get("selling_points", ""),
@@ -406,27 +394,13 @@ def parse_product(request: ParseProductRequest):
     # V3: Try simple HTML parsing first
     parsed = crawl_product(url)
 
-    # If parsing is weak, use AI to enhance
-    if not parsed.get("name") or not parsed.get("selling_points"):
-        logger.info("HTML parsing weak, using AI fallback")
-        try:
-            ai_result = production_service.ai_service.extract_product_info_from_url(url)
-            if not parsed.get("name") and ai_result.get("product_name"):
-                parsed["name"] = ai_result["product_name"]
-            if not parsed.get("selling_points") and ai_result.get("selling_points"):
-                if isinstance(ai_result["selling_points"], list):
-                    parsed["selling_points"] = ", ".join(ai_result["selling_points"])
-                else:
-                    parsed["selling_points"] = ai_result["selling_points"]
-        except Exception as e:
-            logger.error(f"AI fallback failed: {e}")
-
-    # Generate comments using AI
+    # If parsing is weak, use AI to generate comments only (not name)
+    # 名称和卖点都使用原始提取的，不经过 AI
     if not parsed.get("comments"):
         try:
             comments = production_service.ai_service.generate_comments(
                 parsed.get("name", ""),
-                parsed.get("product_info", "") + " " + parsed.get("selling_points", "")
+                parsed.get("product_info", "")
             )
             parsed["comments"] = comments if comments else []
         except Exception as e:
