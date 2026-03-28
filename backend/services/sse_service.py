@@ -198,11 +198,24 @@ def generate_parse_ocr_stream_events(
 
             ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
             yield f"event: ocr_summary_complete\ndata: {ocr_summary_data}\n\n"
+
+            # Step 3: 将 OCR 汇总映射到结构化信息
+            yield "event: structure_start\ndata: {}\n\n"
+
+            # 直接使用 OCR 汇总结果作为结构化信息
+            structured = {
+                "title": ocr_summary.get("product_name", product_name),
+                "material": ocr_summary.get("material", ""),
+                "function": ocr_summary.get("features", []),
+                "scene": ocr_summary.get("applicable", ""),
+                "target": ocr_summary.get("colors", ""),
+                "advantage": ocr_summary.get("season", "")
+            }
         else:
+            # 无图片时发送空 OCR 汇总
             ocr_complete_data = json.dumps({'total': 0, 'combined_text': ''}, ensure_ascii=False)
             yield f"event: ocr_complete\ndata: {ocr_complete_data}\n\n"
 
-            # 无图片时也发送空汇总
             ocr_summary = {
                 "product_name": product_name,
                 "material": "",
@@ -215,18 +228,17 @@ def generate_parse_ocr_stream_events(
             ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
             yield f"event: ocr_summary_complete\ndata: {ocr_summary_data}\n\n"
 
-        # Step 3: Extract structured info
-        yield "event: structure_start\ndata: {}\n\n"
+            # Step 3: 使用商品名称作为标题
+            yield "event: structure_start\ndata: {}\n\n"
 
-        try:
-            structured = extract_product_structure(
-                product_name,
-                selling_points,
-                " ".join(all_ocr_texts)
-            )
-        except Exception as e:
-            logger.error(f"Structure extraction failed: {e}")
-            structured = {}
+            structured = {
+                "title": product_name,
+                "material": "",
+                "function": [],
+                "scene": "",
+                "target": "",
+                "advantage": ""
+            }
 
         structure_data = json.dumps(structured, ensure_ascii=False)
         yield f"event: structure_complete\ndata: {structure_data}\n\n"
