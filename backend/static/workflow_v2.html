@@ -709,6 +709,7 @@
 
                                             // 改为文字消息形式显示 OCR 汇总
                                             const lines = [];
+                                            if (data.product_name) lines.push({ status: '商品名称：', text: data.product_name });
                                             if (data.material) lines.push({ status: '材质：', text: data.material });
                                             if (data.features && data.features.length > 0) {
                                                 lines.push({ status: '特点：', text: data.features.join('、') });
