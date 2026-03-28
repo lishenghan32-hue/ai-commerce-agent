@@ -190,6 +190,8 @@ def generate_parse_ocr_stream_events(
                     "product_name": product_name,
                     "material": "",
                     "features": [],
+                    "function": "",
+                    "scene": "",
                     "applicable": "",
                     "colors": "",
                     "season": "",
@@ -207,6 +209,8 @@ def generate_parse_ocr_stream_events(
                 "product_name": product_name,
                 "material": "",
                 "features": [],
+                "function": "",
+                "scene": "",
                 "applicable": "",
                 "colors": "",
                 "season": "",
@@ -215,18 +219,21 @@ def generate_parse_ocr_stream_events(
             ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
             yield f"event: ocr_summary_complete\ndata: {ocr_summary_data}\n\n"
 
-        # Step 3: Extract structured info
+        # Step 3: 直接使用 OCR 汇总数据作为结构化信息（不再调用 AI）
         yield "event: structure_start\ndata: {}\n\n"
 
-        try:
-            structured = extract_product_structure(
-                product_name,
-                selling_points,
-                " ".join(all_ocr_texts)
-            )
-        except Exception as e:
-            logger.error(f"Structure extraction failed: {e}")
-            structured = {}
+        # 将 OCR 汇总映射为结构化卡片格式（字段名与前端一致）
+        structured = {
+            "title": ocr_summary.get("product_name", ""),
+            "material": ocr_summary.get("material", ""),
+            "features": ocr_summary.get("features", []),
+            "function": ocr_summary.get("function", ""),
+            "scene": ocr_summary.get("scene", ""),
+            "applicable": ocr_summary.get("applicable", ""),
+            "colors": ocr_summary.get("colors", ""),
+            "season": ocr_summary.get("season", ""),
+            "raw_summary": ocr_summary.get("raw_summary", "")
+        }
 
         structure_data = json.dumps(structured, ensure_ascii=False)
         yield f"event: structure_complete\ndata: {structure_data}\n\n"
