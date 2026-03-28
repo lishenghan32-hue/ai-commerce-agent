@@ -5,6 +5,7 @@ Uses Playwright locator for precise element extraction
 import os
 import re
 import time
+import json
 import logging
 from typing import Dict, Any
 
@@ -27,7 +28,7 @@ except Exception as e:
 
 
 STORAGE_FILE = "storage.json"
-TIMEOUT = 15000  # 15 seconds
+TIMEOUT = 30000  # 30 seconds
 DEBUG_HTML_FILE = "debug.html"
 
 
@@ -53,13 +54,22 @@ def parse_douyin_product(url: str) -> Dict[str, Any]:
 
     try:
         with sync_playwright() as p:
-            # Check if storage file exists
+            # Check if storage file exists and has valid cookies
             storage_state = None
             if os.path.exists(STORAGE_FILE):
-                storage_state = STORAGE_FILE
-                print(f"使用已保存的登录状态: {STORAGE_FILE}")
+                try:
+                    with open(STORAGE_FILE, 'r') as f:
+                        storage_data = json.load(f)
+                        # Only use storage if it has cookies
+                        if storage_data.get('cookies') and len(storage_data['cookies']) > 0:
+                            storage_state = STORAGE_FILE
+                            print(f"使用已保存的登录状态: {STORAGE_FILE}")
+                        else:
+                            print("登录状态已失效，需要重新登录")
+                except Exception:
+                    print("登录状态文件损坏，需要重新登录")
 
-            # Launch browser (headless for now, easier to debug)
+            # Launch browser (headless for production)
             browser = p.chromium.launch(
                 headless=True,
                 args=['--disable-blink-features=AutomationControlled']

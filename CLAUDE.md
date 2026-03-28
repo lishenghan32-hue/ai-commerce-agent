@@ -4,8 +4,7 @@
 
 AI Commerce Insight Generator 是一个用于分析抖音商品链接、爬取小红书笔记/评论、使用 AI 分析用户反馈、生成直播带货话术和 PPT 的 Web 应用。
 
-- **技术栈**：FastAPI + SQLAlchemy + MiniMax AI + PaddleOCR + Playwright
-- **数据库**：SQLite (test.db)
+- **技术栈**：FastAPI + MiniMax AI + PaddleOCR + Playwright
 - **前端**：原生 HTML + JavaScript + React CDN
 - **运行端口**：http://localhost:8000
 - **启动命令**：`py -3 -m backend.main`
@@ -17,31 +16,14 @@ ai-commerce-agent/
 ├── backend/
 │   ├── main.py                    # FastAPI 应用入口
 │   ├── config.py                  # 配置（API Key 等）
-│   ├── base.py                    # SQLAlchemy Base
-│   ├── database.py                # 数据库连接
-│   ├── init_database.py           # 数据库初始化
 │   │
 │   ├── api/                       # API 路由
-│   │   ├── routes_products.py    # 商品相关接口
-│   │   ├── routes_tasks.py       # 任务相关接口
-│   │   ├── routes_test.py        # 测试接口
-│   │   ├── routes_analysis.py    # 分析接口
 │   │   ├── routes_production.py  # 生产接口（话术生成）
 │   │   └── export_service.py     # 导出服务
 │   │
 │   ├── services/                  # 业务逻辑层
 │   │   ├── ai_service.py         # AI 服务（MiniMax 集成）
 │   │   └── production_service.py # 生产服务
-│   │
-│   ├── schemas/                   # Pydantic 模型
-│   │   └── analysis.py
-│   │
-│   ├── models/                    # SQLAlchemy 模型
-│   │   ├── product_model.py
-│   │   ├── comment_model.py
-│   │   ├── analysis_model.py
-│   │   ├── task_model.py
-│   │   └── note_model.py
 │   │
 │   ├── crawler/                   # 爬虫模块
 │   │   ├── douyin_parser.py      # 抖音商品解析（Playwright + PaddleOCR）
@@ -52,10 +34,10 @@ ai-commerce-agent/
 │   │   └── structure_service.py  # 结构化信息提取
 │   │
 │   └── static/
-│       ├── index.html             # 基础模式前端页面
-│       ├── workflow_v2.html       # V2 工作流模式（AI Agent UI）
-│       ├── js/app.js              # 前端逻辑
-│       ├── css/styles.css         # 样式文件
+│       ├── workflow_v2.html       # 工作流模式（AI Agent UI）
+│       ├── js/utils.js            # 工具函数
+│       ├── js/api.js              # API 调用
+│       ├── css/workflow_v2.css    # 样式文件
 │       └── downloads/             # 导出文件目录
 │
 ├── .env                           # 环境变量（API Key）
@@ -155,26 +137,12 @@ ai-commerce-agent/
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| `/` | GET | 返回 index.html |
+| `/` | GET | 返回工作流模式页面 |
 | `/health` | GET | 健康检查 |
-| `/workflow_v2` | GET | V2 工作流页面 |
 
 ## 4. 前端页面结构
 
-### 4.1 基础模式 (`index.html`)
-
-- **功能**：输入评论/商品链接，生成直播带货话术
-- **UI**：极简高级风格（灰白主题 + 紫色强调色 #667eea）
-- **交互**：
-  - 输入商品链接自动解析填充
-  - 输入评论（每行一条）
-  - 点击生成按钮，SSE 流式输出
-  - 实时打字机效果 + 骨架屏动画
-  - 3 种风格话术可折叠展示
-  - 最佳脚本自动标星
-  - 每条话术支持复制和重写
-
-### 4.2 V2 工作流模式 (`workflow_v2.html`)
+### 4.1 工作流模式 (`workflow_v2.html`)
 
 - **UI**：ChatGPT 风格 AI Agent UI
 - **特性**：
@@ -184,19 +152,18 @@ ai-commerce-agent/
   - StructuredCard AI 协作模式（编辑/恢复）
   - AbortController 中断支持
   - 流式话术实时渲染
-- **访问**：`http://localhost:8000/workflow_v2`
+- **访问**：`http://localhost:8000`
 
 ## 5. 已实现功能
 
 ### 5.1 核心功能
 - [x] FastAPI 后端搭建
 - [x] MiniMax AI 集成（评论分析 + 话术生成）
-- [x] SQLite 数据库模型
 - [x] 多风格话术生成（带货型/共情型/理性型）
 - [x] 话术评分系统（自动选出最佳脚本）
-- [x] 结构化商品信息提取（V3）
+- [x] 结构化商品信息提取
 - [x] PaddleOCR 图片文字识别
-- [x] 前端页面（基础模式 + V2 工作流）
+- [x] 前端页面（工作流模式）
 
 ### 5.2 流式输出
 - [x] SSE 流式输出（EventSource）
@@ -216,7 +183,7 @@ ai-commerce-agent/
 - [x] 话术重写（4种模式）
 - [x] 导出功能（TXT/Markdown）
 
-### 5.5 V2 工作流 UI
+### 5.5 工作流 UI
 - [x] 进度条组件
 - [x] 子步骤状态指示
 - [x] 多图 OCR 逐张渲染
@@ -272,11 +239,8 @@ ai-commerce-agent/
 cd ai-commerce-agent
 py -3 -m backend.main
 
-# 访问基础模式
+# 访问工作流模式
 http://localhost:8000
-
-# 访问 V2 工作流模式
-http://localhost:8000/workflow_v2
 ```
 
 ## 8. 待开发功能

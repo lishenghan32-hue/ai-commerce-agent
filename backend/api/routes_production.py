@@ -356,11 +356,15 @@ def parse_product(request: ParseProductRequest):
         try:
             parsed = parse_douyin_product(url)
             logger.info(f"parse_douyin_product 返回: name={parsed.get('name')}")
-            # 名称和卖点都使用原始提取的，不经过 AI
-            # AI 汇总在后续流程中会有详细结构化信息
 
-            # Extract structured product info
-            try:
+            # If Playwright returns empty result, it likely means user is not logged in
+            # Fall back to simple parser
+            if not parsed.get("name"):
+                logger.warning("Playwright 解析结果为空，可能未登录，使用简单解析")
+            else:
+                # 名称和卖点都使用原始提取的，不经过 AI
+                # Extract structured product info
+                try:
                     structured = extract_product_structure(
                         parsed.get("name", ""),
                         parsed.get("selling_points", ""),
@@ -391,7 +395,7 @@ def parse_product(request: ParseProductRequest):
         except Exception as e:
             logger.error(f"Playwright parsing failed: {e}")
 
-    # V3: Try simple HTML parsing first
+    # V3: Try simple HTML parsing first (for non-Douyin URLs, or when Douyin Playwright failed)
     parsed = crawl_product(url)
 
     # If parsing is weak, use AI to generate comments only (not name)

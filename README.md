@@ -11,12 +11,11 @@
 - 🔗 抖音/淘宝/京东商品链接自动解析（Playwright + AI）
 - 📷 PaddleOCR 图片文字识别
 - 🎯 AI 结构化商品信息提取（材质、特点、适用人群等）
-- 📱 双 UI 模式（基础模式 + V2 工作流）
+- 📱 单一工作流 UI 模式
 
 ## 🧱 技术架构
 
 - **Backend**: Python (FastAPI)
-- **Database**: SQLite
 - **AI**: MiniMax API
 - **Crawler**: Playwright
 - **OCR**: PaddleOCR
@@ -30,27 +29,20 @@ ai-commerce-agent/
 │   ├── main.py                    # FastAPI 应用入口
 │   ├── config.py                  # 配置（API Key 等）
 │   ├── api/                       # API 路由
-│   │   ├── routes_production.py  # 主要生产接口
-│   │   ├── routes_analysis.py    # 分析接口
-│   │   ├── routes_products.py    # 商品接口
-│   │   └── routes_test.py        # 测试接口
+│   │   └── routes_production.py  # 主要生产接口
 │   ├── services/                  # 业务逻辑层
 │   │   ├── ai_service.py         # AI 服务
 │   │   └── production_service.py # 生产服务
 │   ├── crawler/                   # 爬虫模块
 │   │   ├── douyin_parser.py      # 抖音商品解析
-│   │   ├── tmall_parser.py       # 淘宝解析
-│   │   ├── jd_parser.py          # 京东解析
 │   │   └── simple_parser.py      # 基础解析
 │   ├── ai_engine/                 # AI 引擎
 │   │   ├── ocr_service.py        # PaddleOCR
-│   │   └── structure_service.py  # 结构化提取 + OCR汇总
-│   ├── models/                    # 数据模型
+│   │   └── structure_service.py  # 结构化提取
 │   └── static/                    # 前端静态文件
-│       ├── index.html             # 基础模式
-│       ├── workflow_v2.html       # V2 工作流模式
+│       ├── workflow_v2.html       # 工作流模式
 │       ├── css/
-│       │   └── workflow_v2.css    # V2 样式
+│       │   └── workflow_v2.css    # 样式
 │       └── js/
 │           ├── utils.js          # 工具函数
 │           └── api.js             # API 调用
@@ -85,8 +77,7 @@ py -3 -m backend.main
 
 ### 4. 访问
 
-- 基础模式：http://localhost:8000
-- V2 工作流：http://localhost:8000/workflow_v2
+- 工作流模式：http://localhost:8000
 
 ## 📡 API 接口
 
@@ -129,12 +120,7 @@ POST /api/rewrite-script
 
 ## 📱 UI 模式
 
-### 基础模式 (`/`)
-- 左侧输入商品链接/评论
-- 右侧 SSE 流式输出话术
-- 支持话术重写、复制、导出
-
-### V2 工作流模式 (`/workflow_v2`)
+### 工作流模式 (`/`)
 - ChatGPT 风格 AI Agent UI
 - 顶部进度条（解析 → OCR → 结构化 → 话术）
 - 子步骤实时状态指示

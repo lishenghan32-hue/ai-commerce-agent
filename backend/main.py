@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 import os
 
 from backend.config import settings
-from backend.api import routes_products, routes_test, routes_analysis, routes_production
+from backend.api import routes_production
 
 app = FastAPI(
     title="AI Commerce Insight Generator",
@@ -28,9 +28,6 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(routes_products.router, prefix="/api", tags=["products"])
-app.include_router(routes_test.router, prefix="/api", tags=["test"])
-app.include_router(routes_analysis.router, prefix="/api", tags=["analysis"])
 app.include_router(routes_production.router, prefix="/api", tags=["production"])
 
 # Serve static files
@@ -41,24 +38,12 @@ if os.path.exists(static_dir):
 
 @app.get("/")
 async def root():
-    """Serve index.html"""
-    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {
-        "message": "AI Commerce Insight Generator API",
-        "version": "1.0.0",
-        "status": "running"
-    }
-
-
-@app.get("/workflow_v2")
-async def workflow_v2():
-    """Serve workflow_v2.html"""
-    workflow_v2_path = os.path.join(os.path.dirname(__file__), "static", "workflow_v2.html")
+    """Redirect to workflow_v2"""
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    workflow_v2_path = os.path.join(static_dir, "workflow_v2.html")
     if os.path.exists(workflow_v2_path):
         return FileResponse(workflow_v2_path)
-    return {"message": "Workflow V2 page not found"}
+    return {"message": "AI Commerce Insight Generator API", "version": "1.0.0", "status": "running"}
 
 
 @app.get("/health")
