@@ -1,17 +1,14 @@
 """
 Production API routes
 """
-import os
 import json
 from urllib.parse import quote
-from typing import Generator, Dict
+from typing import Generator, Dict, List, Optional
 import logging
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel, Field
-from typing import List, Optional
-from typing import Dict, Generator
+from pydantic import BaseModel
 
 from backend.services.production_service import ProductionService
 from backend.services.export_service import ExportService
@@ -20,24 +17,6 @@ from backend.crawler.douyin_parser import parse_douyin_product
 from backend.ai_engine.structure_service import extract_product_structure, extract_ocr_summary
 from backend.ai_engine.ocr_service import get_ocr_service
 from backend.data.mock_data import get_mock_data
-
-# Platform detection based on URL
-PLATFORM_PATTERNS = {
-    "douyin": ["douyin.com", "jinritemai.com", "haohuo", "抖音"],
-    "tmall": ["detail.tmall.com", "tmall.hk", "world.tmall.com", "taobao.com"],
-    "jd": ["item.jd.com", "jd.com", "京东"],
-    "pinduoduo": ["pinduoduo.com", "yangkeduo.com", "拼多多"]
-}
-
-
-def detect_platform_from_url(url: str) -> str:
-    """Detect platform from URL"""
-    url_lower = url.lower()
-    for platform, patterns in PLATFORM_PATTERNS.items():
-        for pattern in patterns:
-            if pattern.lower() in url_lower:
-                return platform
-    return "unknown"
 
 
 router = APIRouter()

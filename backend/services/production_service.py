@@ -3,14 +3,14 @@ Production Service - Combine comment analysis and script generation
 """
 from typing import List, Dict, Any, Optional
 
-from backend.services.ai_service import AIService
+from backend.services.ai import get_ai_service
 
 
 class ProductionService:
     """Service for combining AI services"""
 
     def __init__(self):
-        self.ai_service = AIService()
+        self.ai_service = get_ai_service()
 
     def prepare_comments(
         self,
