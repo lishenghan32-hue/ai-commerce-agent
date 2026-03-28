@@ -12,15 +12,16 @@ from backend.services.ai import prompts
 logger = logging.getLogger(__name__)
 
 
-def extract_ocr_summary(ocr_texts: List[str]) -> Dict[str, Any]:
+def extract_ocr_summary(ocr_texts: List[str], product_name: str = "") -> Dict[str, Any]:
     """
     Extract structured information from all OCR texts using AI.
 
     Args:
         ocr_texts: List of OCR texts from all product images
+        product_name: Original product name
 
     Returns:
-        Dict with structured fields: material, features, applicable, colors, season, raw_summary
+        Dict with structured fields: material, features, applicable, colors, season, raw_summary, product_name
     """
     if not ocr_texts:
         return {
@@ -29,7 +30,8 @@ def extract_ocr_summary(ocr_texts: List[str]) -> Dict[str, Any]:
             "applicable": "",
             "colors": "",
             "season": "",
-            "raw_summary": ""
+            "raw_summary": "",
+            "product_name": product_name
         }
 
     combined_text = " ".join(ocr_texts)
@@ -47,7 +49,8 @@ def extract_ocr_summary(ocr_texts: List[str]) -> Dict[str, Any]:
             "applicable": parsed.get("applicable", ""),
             "colors": parsed.get("colors", ""),
             "season": parsed.get("season", ""),
-            "raw_summary": parsed.get("raw_summary", "")[:500] if parsed.get("raw_summary") else ""
+            "raw_summary": parsed.get("raw_summary", "")[:500] if parsed.get("raw_summary") else "",
+            "product_name": product_name
         }
     except Exception as e:
         logger.error(f"Failed to extract OCR summary: {e}")
@@ -57,7 +60,8 @@ def extract_ocr_summary(ocr_texts: List[str]) -> Dict[str, Any]:
             "applicable": "",
             "colors": "",
             "season": "",
-            "raw_summary": ""
+            "raw_summary": "",
+            "product_name": product_name
         }
 
 
