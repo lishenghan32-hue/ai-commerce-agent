@@ -130,6 +130,13 @@
                             </span>
                         </div>
                         <div className="ocr-summary">
+                            {data.product_name && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🛍️ 商品名称</div>
+                                    <div className="ocr-summary-text">{data.product_name}</div>
+                                </div>
+                            )}
+
                             {data.material && (
                                 <div className="ocr-summary-item">
                                     <div className="ocr-summary-header">📦 材质</div>
