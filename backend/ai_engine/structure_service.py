@@ -25,13 +25,13 @@ def extract_ocr_summary(ocr_texts: List[str], product_name: str = "") -> Dict[st
     """
     if not ocr_texts:
         return {
+            "product_name": product_name,
             "material": "",
             "features": [],
             "applicable": "",
             "colors": "",
             "season": "",
-            "raw_summary": "",
-            "product_name": product_name
+            "raw_summary": ""
         }
 
     combined_text = " ".join(ocr_texts)
@@ -44,24 +44,24 @@ def extract_ocr_summary(ocr_texts: List[str], product_name: str = "") -> Dict[st
         parsed = json.loads(json_response)
 
         return {
+            "product_name": product_name,
             "material": parsed.get("material", ""),
             "features": parsed.get("features", []),
             "applicable": parsed.get("applicable", ""),
             "colors": parsed.get("colors", ""),
             "season": parsed.get("season", ""),
-            "raw_summary": parsed.get("raw_summary", "")[:500] if parsed.get("raw_summary") else "",
-            "product_name": product_name
+            "raw_summary": parsed.get("raw_summary", "")[:500] if parsed.get("raw_summary") else ""
         }
     except Exception as e:
         logger.error(f"Failed to extract OCR summary: {e}")
         return {
+            "product_name": product_name,
             "material": "",
             "features": [],
             "applicable": "",
             "colors": "",
             "season": "",
-            "raw_summary": "",
-            "product_name": product_name
+            "raw_summary": ""
         }
 
 

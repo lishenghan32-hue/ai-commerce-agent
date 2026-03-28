@@ -187,13 +187,13 @@ def generate_parse_ocr_stream_events(
             except Exception as e:
                 logger.error(f"OCR summary extraction failed: {e}")
                 ocr_summary = {
+                    "product_name": product_name,
                     "material": "",
                     "features": [],
                     "applicable": "",
                     "colors": "",
                     "season": "",
-                    "raw_summary": "",
-                    "product_name": product_name
+                    "raw_summary": ""
                 }
 
             ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
@@ -204,13 +204,13 @@ def generate_parse_ocr_stream_events(
 
             # 无图片时也发送空汇总
             ocr_summary = {
+                "product_name": product_name,
                 "material": "",
                 "features": [],
                 "applicable": "",
                 "colors": "",
                 "season": "",
-                "raw_summary": "",
-                "product_name": product_name
+                "raw_summary": ""
             }
             ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
             yield f"event: ocr_summary_complete\ndata: {ocr_summary_data}\n\n"
