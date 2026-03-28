@@ -381,7 +381,6 @@
             const [isTyping, setIsTyping] = useState(false);
             const [isWaitingUser, setIsWaitingUser] = useState(false);
             const [structuredData, setStructuredData] = useState({});
-            const [ocrSummaryData, setOcrSummaryData] = useState({});
             const [currentStep, setCurrentStep] = useState(0);
             const [subStep, setSubStep] = useState('');
             const [completedSteps, setCompletedSteps] = useState([]);
@@ -700,8 +699,6 @@
                                         // ocr_summary_complete event - AI 提取结构化信息
                                         if (data.features !== undefined) {
                                             setSubStep('AI 提取结构化信息');
-                                            // 保存 OCR 汇总数据用于后续映射
-                                            setOcrSummaryData(data);
                                             // 更新 loading 为 AI 汇总完成消息
                                             updateLastMessage({
                                                 type: 'text',
@@ -739,18 +736,7 @@
                                             setSubStep('提取结构化信息...');
                                             setCurrentStep(3);
                                             setCompletedSteps(prev => [...new Set([...prev, 2, 3])]);
-
-                                            // 将 OCR 汇总数据映射到结构化数据
-                                            const mappedData = {
-                                                title: ocrSummaryData.product_name || data.title || '',
-                                                material: ocrSummaryData.material || data.material || '',
-                                                function: ocrSummaryData.features ? ocrSummaryData.features.join('、') : (data.function || ''),
-                                                scene: ocrSummaryData.applicable || data.scene || '',
-                                                target: ocrSummaryData.colors || data.target || '',
-                                                advantage: ocrSummaryData.season || data.advantage || ''
-                                            };
-
-                                            setStructuredData(mappedData);
+                                            setStructuredData(data);
 
                                             // 更新 loading 为完成消息
                                             updateLastMessage({

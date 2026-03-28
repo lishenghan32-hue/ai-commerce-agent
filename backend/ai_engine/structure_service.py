@@ -40,7 +40,9 @@ def extract_ocr_summary(ocr_texts: List[str], product_name: str = "") -> Dict[st
         ai_service = get_ai_service()
         prompt = prompts.build_ocr_summary_prompt(combined_text)
         raw_response = ai_service._call_api(prompt)
+        logger.info(f"OCR summary raw response: {raw_response[:200]}")
         json_response = ai_service._extract_json_with_llm(raw_response)
+        logger.info(f"OCR summary json response: {json_response[:200]}")
         parsed = json.loads(json_response)
 
         return {
