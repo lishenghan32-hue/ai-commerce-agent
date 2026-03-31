@@ -12,13 +12,12 @@ from pydantic import BaseModel
 
 from backend.schemas.production import (
     GenerateScriptFromCommentsRequest,
-    GenerateMultiStyleScriptsResponse,
+    GenerateScriptResponse,
     ExportScriptsRequest,
     RewriteScriptRequest,
     ParseProductRequest,
     ParseProductResponse,
     ParseProductStreamRequest,
-    ScriptWithStyle,
 )
 from backend.services.production_service import ProductionService
 from backend.services.export_service import ExportService
@@ -42,13 +41,13 @@ ocr_service = get_ocr_service()
 # ===== 路由端点 =====
 
 
-@router.post("/generate-multi-style-scripts-from-comments", response_model=GenerateMultiStyleScriptsResponse)
-def generate_multi_style_scripts_from_comments(request: GenerateScriptFromCommentsRequest):
+@router.post("/generate-script-from-comments", response_model=GenerateScriptResponse)
+def generate_script_from_comments(request: GenerateScriptFromCommentsRequest):
     """
-    Generate scripts in three different styles from comments with scoring
+    Generate a single script from comments
     """
     try:
-        result = production_service.generate_multi_style_scripts_from_comments(
+        result = production_service.generate_script_from_comments(
             product_url=request.product_url,
             product_name=request.product_name,
             product_info=request.product_info,
@@ -58,7 +57,7 @@ def generate_multi_style_scripts_from_comments(request: GenerateScriptFromCommen
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return GenerateMultiStyleScriptsResponse(**result)
+    return GenerateScriptResponse(**result)
 
 
 @router.post("/export-scripts")
@@ -68,18 +67,17 @@ def export_scripts(request: ExportScriptsRequest):
     """
     try:
         # 转换 Pydantic 模型为 dict
-        best_script_dict = request.best_script.model_dump() if request.best_script else None
-        scripts_dicts = [s.model_dump() for s in request.scripts] if request.scripts else []
+        script_dict = request.script.model_dump()
 
         # 生成内容
         export_svc = ExportService()
         file_format = request.format
         if file_format == "md":
-            content = export_svc._generate_markdown(best_script_dict, scripts_dicts)
+            content = export_svc._generate_markdown(script_dict)
             media_type = "text/markdown"
             ext = "md"
         else:
-            content = export_svc._generate_txt(best_script_dict, scripts_dicts)
+            content = export_svc._generate_txt(script_dict)
             media_type = "text/plain; charset=utf-8"
             ext = "txt"
 

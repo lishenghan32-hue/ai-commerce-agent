@@ -159,17 +159,6 @@ class BaseAIService:
             "offer": ""
         }
 
-    def _default_script_with_style(self, style: str) -> Dict[str, Any]:
-        return {
-            "style": style,
-            "opening_hook": "",
-            "pain_point": "",
-            "solution": "",
-            "proof": "",
-            "offer": ""
-        }
-
-
 # ==================== Import Mixins ====================
 # Import at bottom to avoid circular imports
 from backend.services.ai.comment import AIServiceCommentMixin

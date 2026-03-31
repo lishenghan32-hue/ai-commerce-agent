@@ -13,13 +13,33 @@
     <div id="root"></div>
 
     <!-- Load utility functions (no JSX, no Babel needed) -->
-    <script src="/static/js/utils.js"></script>
-    <script src="/static/js/api.js"></script>
+    <script src="/static/js/utils.js?v=20260331-2"></script>
+    <script src="/static/js/api.js?v=20260331-2"></script>
 
     <script type="text/babel">
         // ===== React Components (use Utils and API from window) =====
 
         const { sleep, generateId, formatScriptData, getSectionLabel, createEmptyScript } = window.Utils;
+        const formatScriptMarkdown = window.Utils.formatScriptMarkdown || ((script) => {
+            const labels = {
+                opening_hook: '开头吸引',
+                pain_point: '痛点描述',
+                solution: '解决方案',
+                proof: '证明案例',
+                offer: '促单话术'
+            };
+            return Object.entries(labels)
+                .map(([key, label]) => {
+                    const rawContent = Array.isArray(script[key]) ? script[key].join('') : (script[key] || '');
+                    const content = String(rawContent)
+                        .replace(/\r\n?/g, '\n')
+                        .replace(/\n{3,}/g, '\n\n')
+                        .trim();
+                    return content ? `## ${label}\n\n${content}` : '';
+                })
+                .filter(Boolean)
+                .join('\n\n');
+        });
         const { callParseAPI, callParseStreamAPI } = window.API;
 
         function LoadingBubble({ text }) {
@@ -232,13 +252,39 @@
         }
 
         // ===== Comments Section Component =====
-        function CommentsSection({ comments, onChange, onGenerate, onContinue, isGenerating }) {
+        function CommentsSection({ comments, hasTriggered, onChange, onGenerate, onContinue, isGenerating }) {
             const [isCollapsed, setIsCollapsed] = React.useState(true);
             const hasComments = comments && comments.length > 0 && comments.some(c => c && c.trim());
 
+            React.useEffect(() => {
+                if (hasTriggered && hasComments) {
+                    setIsCollapsed(false);
+                }
+            }, [hasTriggered, hasComments]);
+
             return (
                 <div className="comments-section">
-                    {hasComments && (
+                    {!hasTriggered && (
+                        <button
+                            type="button"
+                            className="generate-comments-btn"
+                            onClick={onGenerate}
+                            disabled={isGenerating}
+                        >
+                            {isGenerating ? (
+                                <span className="loading-text">
+                                    AI 生成评论中
+                                    <span className="loading-dots-inline">
+                                        <span className="loading-dot"></span>
+                                        <span className="loading-dot"></span>
+                                        <span className="loading-dot"></span>
+                                    </span>
+                                </span>
+                            ) : '触发用户评论生成'}
+                        </button>
+                    )}
+
+                    {hasTriggered && hasComments && (
                         <div className="comments-toggle">
                             <button
                                 type="button"
@@ -252,25 +298,27 @@
                         </div>
                     )}
 
-                    <button
-                        type="button"
-                        className={`generate-comments-btn${hasComments ? ' generate-comments-btn-secondary' : ''}`}
-                        onClick={onGenerate}
-                        disabled={isGenerating}
-                    >
-                        {isGenerating ? (
-                            <span className="loading-text">
-                                AI 生成评论中
-                                <span className="loading-dots-inline">
-                                    <span className="loading-dot"></span>
-                                    <span className="loading-dot"></span>
-                                    <span className="loading-dot"></span>
+                    {hasTriggered && (
+                        <button
+                            type="button"
+                            className={`generate-comments-btn${hasComments ? ' generate-comments-btn-secondary' : ''}`}
+                            onClick={onGenerate}
+                            disabled={isGenerating}
+                        >
+                            {isGenerating ? (
+                                <span className="loading-text">
+                                    AI 生成评论中
+                                    <span className="loading-dots-inline">
+                                        <span className="loading-dot"></span>
+                                        <span className="loading-dot"></span>
+                                        <span className="loading-dot"></span>
+                                    </span>
                                 </span>
-                            </span>
-                        ) : (hasComments ? '重新生成评论' : '🤖 AI 生成模拟评论')}
-                    </button>
+                            ) : (hasComments ? '重新生成评论' : '生成评论')}
+                        </button>
+                    )}
 
-                    {hasComments && !isCollapsed && (
+                    {hasTriggered && hasComments && !isCollapsed && (
                         <div className="comments-list">
                             {comments.map((comment, idx) => (
                                 <div key={idx} className="comment-item">
@@ -292,26 +340,24 @@
                         onClick={onContinue}
                         disabled={isGenerating}
                     >
-                        {isGenerating ? '处理中...' : (hasComments ? '▶ 继续生成话术' : '跳过评论，直接生成话术')}
+                        {isGenerating ? '处理中...' : (hasTriggered && hasComments ? '▶ 继续生成话术' : '跳过评论，直接生成话术')}
                     </button>
                 </div>
             );
         }
 
-        function StructuredCard({ data, onChange, onConfirm, showConfirm, onGenerateComments, isGeneratingComments, initialComments = [] }) {
+        function StructuredCard({ data, onChange, onConfirm, showConfirm, onGenerateComments, isGeneratingComments }) {
             const [editedFields, setEditedFields] = React.useState({});
             const [originalData, setOriginalData] = React.useState({...data});
-            const [generatedComments, setGeneratedComments] = React.useState(
-                Array.isArray(initialComments) ? initialComments.filter(comment => comment && comment.trim()).slice(0, 10) : []
-            );
+            const [generatedComments, setGeneratedComments] = React.useState([]);
+            const [hasTriggeredComments, setHasTriggeredComments] = React.useState(false);
 
             React.useEffect(() => {
                 setOriginalData({...data});
                 setEditedFields({});
-                setGeneratedComments(
-                    Array.isArray(initialComments) ? initialComments.filter(comment => comment && comment.trim()).slice(0, 10) : []
-                );
-            }, [data, initialComments]);
+                setGeneratedComments([]);
+                setHasTriggeredComments(false);
+            }, [data]);
 
             const handleFieldChange = (key, value) => {
                 onChange(key, value);
@@ -331,6 +377,7 @@
 
             const handleGenerateComments = async () => {
                 if (onGenerateComments) {
+                    setHasTriggeredComments(true);
                     const comments = await onGenerateComments();
                     if (comments && Array.isArray(comments)) {
                         setGeneratedComments(comments.filter(comment => comment && comment.trim()).slice(0, 10));
@@ -342,7 +389,7 @@
                 // Pass generated comments to onConfirm
                 const validComments = generatedComments.filter(c => c && c.trim());
                 if (onConfirm) {
-                    onConfirm(validComments.length > 0 ? validComments : null);
+                    onConfirm(hasTriggeredComments && validComments.length > 0 ? validComments : []);
                 }
             };
 
@@ -451,6 +498,7 @@
                     {showConfirm && (
                         <CommentsSection
                             comments={generatedComments}
+                            hasTriggered={hasTriggeredComments}
                             onChange={handleCommentChange}
                             onGenerate={handleGenerateComments}
                             onContinue={handleContinue}
@@ -486,7 +534,17 @@
             );
         }
 
-        function MessageBubble({ message }) {
+        function MarkdownMessage({ content }) {
+            return (
+                <div className="message-item-no-avatar">
+                    <div className="markdown-message">
+                        <pre>{content}</pre>
+                    </div>
+                </div>
+            );
+        }
+
+        function MessageBubble({ message, isGenerating }) {
             const isLoading = message.type === 'loading';
 
             if (isLoading) {
@@ -501,6 +559,10 @@
             // 多行消息（商品解析结果）
             if (message.type === 'lines') {
                 return <LinesMessage lines={message.lines} />;
+            }
+
+            if (message.type === 'markdown') {
+                return <MarkdownMessage content={message.content} />;
             }
 
             if (message.cardType === 'product') {
@@ -527,8 +589,7 @@
                             onConfirm={message.onConfirm}
                             showConfirm={message.showConfirm}
                             onGenerateComments={message.onGenerateComments}
-                            isGeneratingComments={message.isGeneratingComments}
-                            initialComments={message.initialComments}
+                            isGeneratingComments={isGenerating}
                         />
                     </div>
                 );
@@ -618,10 +679,40 @@
                 setIsGenerating(true);
 
                 try {
-                    const result = await window.API.callGenerateCommentsAPI(productName, productInfo);
+                    const callGenerateCommentsAPI = window.API && window.API.callGenerateCommentsAPI
+                        ? window.API.callGenerateCommentsAPI
+                        : async (name, info) => {
+                            const response = await fetch('/api/generate-comments', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    product_name: name || '',
+                                    product_info: info || ''
+                                })
+                            });
+                            if (!response.ok) {
+                                let detail = '';
+                                try {
+                                    const errorData = await response.json();
+                                    detail = errorData.detail || JSON.stringify(errorData);
+                                } catch (parseError) {
+                                    detail = await response.text();
+                                }
+                                throw new Error(detail || `Generate comments failed (${response.status})`);
+                            }
+                            return response.json();
+                        };
+
+                    const result = await callGenerateCommentsAPI(productName, productInfo);
                     return result.comments || [];
                 } catch (error) {
                     console.error('Generate comments error:', error);
+                    addMessage({
+                        type: 'text',
+                        status: '❌',
+                        content: `评论生成失败: ${error.message || '请重试'}`,
+                        role: 'ai'
+                    });
                     return [];
                 } finally {
                     setIsGenerating(false);
@@ -693,25 +784,24 @@
                                         }
                                         script[data.field].push(data.content);
 
-                                        const formatted = formatScriptData(script);
+                                        const markdown = formatScriptMarkdown(script);
                                         setSubStep(`正在生成${getSectionLabel(currentField)}...`);
 
                                         updateLastMessage({
-                                            type: 'card',
-                                            cardType: 'scripts',
-                                            data: formatted,
+                                            type: 'markdown',
+                                            content: markdown,
                                             role: 'ai'
                                         });
                                     }
 
                                     // script_complete event
-                                    if (data.scores !== undefined) {
+                                    if (data.completed !== undefined) {
                                         setSubStep('');
                                         setCompletedSteps(prev => [...prev, 4]);
                                     }
 
                                 } catch (e) {
-                                    // Not JSON, skip
+                                    console.error('Script stream parse/render error:', e, dataStr);
                                 }
                             }
                         }
@@ -729,13 +819,6 @@
                         type: 'text',
                         status: '✅',
                         content: '话术生成完成',
-                        role: 'ai'
-                    });
-
-                    addMessage({
-                        type: 'card',
-                        cardType: 'scripts',
-                        data: script,
                         role: 'ai'
                     });
 
@@ -945,7 +1028,6 @@
                                                 showConfirm: true,
                                                 onGenerateComments: handleAppGenerateComments,
                                                 isGeneratingComments: isGenerating,
-                                                initialComments: parsedProductRef.current?.comments || [],
                                                 isWaiting: true
                                             });
 
@@ -979,7 +1061,6 @@
                                                 showConfirm: true,
                                                 onGenerateComments: handleAppGenerateComments,
                                                 isGeneratingComments: isGenerating,
-                                                initialComments: parsedProductRef.current?.comments || [],
                                                 isWaiting: true
                                             });
 
@@ -996,13 +1077,12 @@
                                             }
                                             script[data.field].push(data.content);
 
-                                            const formatted = formatScriptData(script);
+                                            const markdown = formatScriptMarkdown(script);
                                             setSubStep(`正在生成${getSectionLabel(currentField)}...`);
 
                                             updateLastMessage({
-                                                type: 'card',
-                                                cardType: 'scripts',
-                                                data: formatted,
+                                                type: 'markdown',
+                                                content: markdown,
                                                 role: 'ai'
                                             });
                                         }
@@ -1015,13 +1095,13 @@
                                         }
 
                                         // script_complete event
-                                        if (data.scores !== undefined) {
+                                        if (data.completed !== undefined) {
                                             setSubStep('');
                                             setCompletedSteps(prev => [...prev, 4]);
                                         }
 
                                     } catch (e) {
-                                        // Not JSON, skip
+                                        console.error('Flow stream parse/render error:', e, dataStr);
                                     }
                                 }
                             }
@@ -1039,14 +1119,6 @@
                             type: 'text',
                             status: '✅',
                             content: '话术生成完成',
-                            role: 'ai'
-                        });
-
-                        // Add final scripts card
-                        addMessage({
-                            type: 'card',
-                            cardType: 'scripts',
-                            data: script,
                             role: 'ai'
                         });
 
@@ -1088,7 +1160,7 @@
                         ) : (
                             <div className="messages-container">
                                 {messages.map((msg, idx) => (
-                                    <MessageBubble key={msg.id || idx} message={msg} />
+                                    <MessageBubble key={msg.id || idx} message={msg} isGenerating={isGenerating} />
                                 ))}
                                 <div ref={bottomRef}></div>
                             </div>

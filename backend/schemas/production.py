@@ -1,7 +1,7 @@
 """
 Production API schemas
 """
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel
 
 
@@ -23,34 +23,15 @@ class GenerateScriptResponse(BaseModel):
     offer: str
 
 
-class ScriptWithStyle(BaseModel):
-    """Script with style field"""
-    style: str
-    opening_hook: str
-    pain_point: str
-    solution: str
-    proof: str
-    offer: str
-    score: Optional[int] = 0
-    reason: Optional[str] = ""
-
-
-class GenerateMultiStyleScriptsResponse(BaseModel):
-    """Response model for multi-style script generation"""
-    scripts: List[ScriptWithStyle]
-    best_script: Optional[ScriptWithStyle] = None
-
-
 class ExportScriptsRequest(BaseModel):
-    """Request model for exporting scripts"""
-    best_script: Optional[ScriptWithStyle] = None
-    scripts: List[ScriptWithStyle] = []
+    """Request model for exporting a single script"""
+    script: GenerateScriptResponse
     format: str = "txt"
 
 
 class RewriteScriptRequest(BaseModel):
     """Request model for rewriting script"""
-    script: ScriptWithStyle
+    script: GenerateScriptResponse
     mode: str
 
 

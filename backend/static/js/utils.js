@@ -13,6 +13,28 @@ window.Utils = {
         return formatted;
     },
 
+    formatScriptMarkdown: (script) => {
+        const sections = [
+            ['opening_hook', '开头吸引'],
+            ['pain_point', '痛点描述'],
+            ['solution', '解决方案'],
+            ['proof', '证明案例'],
+            ['offer', '促单话术']
+        ];
+
+        return sections
+            .map(([key, label]) => {
+                const rawContent = Array.isArray(script[key]) ? script[key].join('') : (script[key] || '');
+                const content = String(rawContent)
+                    .replace(/\r\n?/g, '\n')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim();
+                return content.trim() ? `## ${label}\n\n${content.trim()}` : '';
+            })
+            .filter(Boolean)
+            .join('\n\n');
+    },
+
     getSectionLabel: (field) => {
         const labels = {
             opening_hook: '开头吸引',

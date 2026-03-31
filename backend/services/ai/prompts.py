@@ -185,8 +185,8 @@ def build_score_prompt(script: Dict[str, Any]) -> str:
     return prompt
 
 
-def build_multi_style_script_prompt(insights: Dict[str, Any], style: str, structured: Dict[str, Any] = None) -> str:
-    """Build prompt for multi-style script generation
+def build_single_style_script_prompt(insights: Dict[str, Any], style: str, structured: Dict[str, Any] = None) -> str:
+    """Build prompt for single-style script generation
 
     Args:
         insights: User insights from comment analysis
