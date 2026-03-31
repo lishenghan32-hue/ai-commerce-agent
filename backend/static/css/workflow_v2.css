@@ -426,24 +426,38 @@ body {
     gap: 12px;
 }
 
+/* Two-column grid layout */
+.structured-grid-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+}
+
+.structured-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .structured-field {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.structured-field input {
-    width: 100%;
-    box-sizing: border-box;
-}
-
 .structured-field label {
     font-size: 12px;
     font-weight: 500;
     color: #666;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.structured-field input {
+.structured-field input,
+.structured-field textarea {
+    width: 100%;
+    box-sizing: border-box;
     padding: 10px 12px;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
@@ -453,22 +467,26 @@ body {
     word-break: break-word;
     white-space: pre-wrap;
     overflow-wrap: break-word;
+    resize: vertical;
+    min-height: 38px;
+    transition: border-color 0.2s, background 0.2s;
 }
 
-.structured-field input:focus {
+.structured-field textarea {
+    min-height: 80px;
+    line-height: 1.5;
+}
+
+.structured-field input:focus,
+.structured-field textarea:focus {
     outline: none;
     border-color: #667eea;
 }
 
-.structured-field input.edited {
+.structured-field input.edited,
+.structured-field textarea.edited {
     border-color: #667eea;
     background: #f8f6ff;
-}
-
-.structured-field label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
 /* 特点标签容器 */
@@ -746,3 +764,129 @@ body {
 .loading-dots-inline .loading-dot:nth-child(1) { animation-delay: 0s; }
 .loading-dots-inline .loading-dot:nth-child(2) { animation-delay: 0.2s; }
 .loading-dots-inline .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ===== Comments Section ===== */
+.comments-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.comments-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    transition: background 0.2s;
+}
+
+.toggle-btn:hover {
+    background: #f0f0f0;
+}
+
+.toggle-arrow {
+    font-size: 10px;
+    color: #999;
+    transition: transform 0.2s;
+}
+
+.comments-count {
+    font-size: 12px;
+    color: #999;
+}
+
+.generate-comments-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.generate-comments-btn-secondary {
+    margin-bottom: 12px;
+    background: #f3f4f6;
+    color: #333;
+    border: 1px solid #e5e7eb;
+}
+
+.generate-comments-btn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.generate-comments-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.comment-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.comment-item label {
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
+}
+
+.comment-item textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 60px;
+    transition: border-color 0.2s;
+}
+
+.comment-item textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn-continue {
+    margin-top: 12px;
+    background: #10b981;
+    width: 100%;
+}
+
+.btn-continue:hover {
+    background: #0ea572;
+}

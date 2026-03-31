@@ -231,14 +231,87 @@
             );
         }
 
-        function StructuredCard({ data, onChange, onConfirm, showConfirm }) {
+        // ===== Comments Section Component =====
+        function CommentsSection({ comments, onChange, onGenerate, onContinue, isGenerating }) {
+            const [isCollapsed, setIsCollapsed] = React.useState(true);
+            const hasComments = comments && comments.length > 0 && comments.some(c => c && c.trim());
+
+            return (
+                <div className="comments-section">
+                    {hasComments && (
+                        <div className="comments-toggle">
+                            <button
+                                type="button"
+                                className="toggle-btn"
+                                onClick={() => setIsCollapsed(!isCollapsed)}
+                            >
+                                <span>💬 用户评论</span>
+                                <span className="toggle-arrow">{isCollapsed ? '▼' : '▲'}</span>
+                            </button>
+                            <span className="comments-count">已生成 {comments.filter(c => c && c.trim()).length} 条评论</span>
+                        </div>
+                    )}
+
+                    <button
+                        type="button"
+                        className={`generate-comments-btn${hasComments ? ' generate-comments-btn-secondary' : ''}`}
+                        onClick={onGenerate}
+                        disabled={isGenerating}
+                    >
+                        {isGenerating ? (
+                            <span className="loading-text">
+                                AI 生成评论中
+                                <span className="loading-dots-inline">
+                                    <span className="loading-dot"></span>
+                                    <span className="loading-dot"></span>
+                                    <span className="loading-dot"></span>
+                                </span>
+                            </span>
+                        ) : (hasComments ? '重新生成评论' : '🤖 AI 生成模拟评论')}
+                    </button>
+
+                    {hasComments && !isCollapsed && (
+                        <div className="comments-list">
+                            {comments.map((comment, idx) => (
+                                <div key={idx} className="comment-item">
+                                    <label>评论 {idx + 1}</label>
+                                    <textarea
+                                        value={comment}
+                                        onChange={(e) => onChange(idx, e.target.value)}
+                                        placeholder={`输入用户评论 ${idx + 1}...`}
+                                        rows={2}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <button
+                        type="button"
+                        className="btn-confirm btn-continue"
+                        onClick={onContinue}
+                        disabled={isGenerating}
+                    >
+                        {isGenerating ? '处理中...' : (hasComments ? '▶ 继续生成话术' : '跳过评论，直接生成话术')}
+                    </button>
+                </div>
+            );
+        }
+
+        function StructuredCard({ data, onChange, onConfirm, showConfirm, onGenerateComments, isGeneratingComments, initialComments = [] }) {
             const [editedFields, setEditedFields] = React.useState({});
             const [originalData, setOriginalData] = React.useState({...data});
+            const [generatedComments, setGeneratedComments] = React.useState(
+                Array.isArray(initialComments) ? initialComments.filter(comment => comment && comment.trim()).slice(0, 10) : []
+            );
 
             React.useEffect(() => {
                 setOriginalData({...data});
                 setEditedFields({});
-            }, [data]);
+                setGeneratedComments(
+                    Array.isArray(initialComments) ? initialComments.filter(comment => comment && comment.trim()).slice(0, 10) : []
+                );
+            }, [data, initialComments]);
 
             const handleFieldChange = (key, value) => {
                 onChange(key, value);
@@ -248,6 +321,29 @@
             const handleReset = (key) => {
                 onChange(key, originalData[key]);
                 setEditedFields(prev => ({...prev, [key]: false}));
+            };
+
+            const handleCommentChange = (idx, value) => {
+                const newComments = [...generatedComments];
+                newComments[idx] = value;
+                setGeneratedComments(newComments);
+            };
+
+            const handleGenerateComments = async () => {
+                if (onGenerateComments) {
+                    const comments = await onGenerateComments();
+                    if (comments && Array.isArray(comments)) {
+                        setGeneratedComments(comments.filter(comment => comment && comment.trim()).slice(0, 10));
+                    }
+                }
+            };
+
+            const handleContinue = () => {
+                // Pass generated comments to onConfirm
+                const validComments = generatedComments.filter(c => c && c.trim());
+                if (onConfirm) {
+                    onConfirm(validComments.length > 0 ? validComments : null);
+                }
             };
 
             const fieldLabels = {
@@ -262,6 +358,12 @@
                 raw_summary: '详细汇总'
             };
 
+            // Split fields into two columns: left column (first 5) and right column (remaining)
+            const fieldEntries = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null);
+            const half = Math.ceil(fieldEntries.length / 2);
+            const leftFields = fieldEntries.slice(0, half);
+            const rightFields = fieldEntries.slice(half);
+
             return (
                 <div className="card">
                     <div className="card-header">
@@ -271,33 +373,89 @@
                             <span className="ai-icon">⚡</span> AI 推荐
                         </span>
                     </div>
-                    <div className="structured-grid">
-                        {Object.keys(data).map(key => (
-                            <div className="structured-field" key={key}>
-                                <label>
-                                    {fieldLabels[key] || key}
-                                    {editedFields[key] && (
-                                        <button
-                                            className="reset-btn"
-                                            onClick={() => handleReset(key)}
-                                            title="恢复AI推荐"
-                                        >
-                                            ↩
-                                        </button>
+
+                    {/* Two-column grid layout */}
+                    <div className="structured-grid-two-col">
+                        {/* Left column */}
+                        <div className="structured-col">
+                            {leftFields.map(key => (
+                                <div className="structured-field" key={key}>
+                                    <label>
+                                        {fieldLabels[key] || key}
+                                        {editedFields[key] && (
+                                            <button
+                                                className="reset-btn"
+                                                onClick={() => handleReset(key)}
+                                                title="恢复AI推荐"
+                                            >
+                                                ↩
+                                            </button>
+                                        )}
+                                    </label>
+                                    {key === 'raw_summary' ? (
+                                        <textarea
+                                            value={data[key] || ''}
+                                            onChange={(e) => handleFieldChange(key, e.target.value)}
+                                            className={editedFields[key] ? 'edited' : ''}
+                                            rows={4}
+                                            placeholder="详细汇总..."
+                                        />
+                                    ) : (
+                                        <input
+                                            value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
+                                            onChange={(e) => handleFieldChange(key, e.target.value)}
+                                            className={editedFields[key] ? 'edited' : ''}
+                                        />
                                     )}
-                                </label>
-                                <input
-                                    value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
-                                    onChange={(e) => handleFieldChange(key, e.target.value)}
-                                    className={editedFields[key] ? 'edited' : ''}
-                                />
-                            </div>
-                        ))}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Right column */}
+                        <div className="structured-col">
+                            {rightFields.map(key => (
+                                <div className="structured-field" key={key}>
+                                    <label>
+                                        {fieldLabels[key] || key}
+                                        {editedFields[key] && (
+                                            <button
+                                                className="reset-btn"
+                                                onClick={() => handleReset(key)}
+                                                title="恢复AI推荐"
+                                            >
+                                                ↩
+                                            </button>
+                                        )}
+                                    </label>
+                                    {key === 'raw_summary' ? (
+                                        <textarea
+                                            value={data[key] || ''}
+                                            onChange={(e) => handleFieldChange(key, e.target.value)}
+                                            className={editedFields[key] ? 'edited' : ''}
+                                            rows={4}
+                                            placeholder="详细汇总..."
+                                        />
+                                    ) : (
+                                        <input
+                                            value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
+                                            onChange={(e) => handleFieldChange(key, e.target.value)}
+                                            className={editedFields[key] ? 'edited' : ''}
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
+
+                    {/* Comments section below the card */}
                     {showConfirm && (
-                        <button className="btn-confirm" onClick={onConfirm}>
-                            确认并继续
-                        </button>
+                        <CommentsSection
+                            comments={generatedComments}
+                            onChange={handleCommentChange}
+                            onGenerate={handleGenerateComments}
+                            onContinue={handleContinue}
+                            isGenerating={isGeneratingComments}
+                        />
                     )}
                 </div>
             );
@@ -368,6 +526,9 @@
                             onChange={message.onChange}
                             onConfirm={message.onConfirm}
                             showConfirm={message.showConfirm}
+                            onGenerateComments={message.onGenerateComments}
+                            isGeneratingComments={message.isGeneratingComments}
+                            initialComments={message.initialComments}
                         />
                     </div>
                 );
@@ -448,8 +609,27 @@
                 });
             };
 
+            // Generate comments using AI
+            const handleAppGenerateComments = async () => {
+                const productData = parsedProductRef.current || {};
+                const productName = productData.name || structuredData.title || '';
+                const productInfo = productData.selling_points || structuredData.raw_summary || '';
+
+                setIsGenerating(true);
+
+                try {
+                    const result = await window.API.callGenerateCommentsAPI(productName, productInfo);
+                    return result.comments || [];
+                } catch (error) {
+                    console.error('Generate comments error:', error);
+                    return [];
+                } finally {
+                    setIsGenerating(false);
+                }
+            };
+
             // Continue to generate scripts after user confirms structured data
-            const handleScriptsContinue = async () => {
+            const handleScriptsContinue = async (comments) => {
                 setIsWaitingUser(false);
                 setCurrentStep(4);
                 setSubStep('正在生成话术...');
@@ -472,7 +652,7 @@
                         product_info: productData.selling_points || '',
                         selling_points: productData.selling_points || '',
                         structured: JSON.stringify(currentStructured),
-                        comments: JSON.stringify(productData.comments || [])
+                        comments: JSON.stringify(comments || productData.comments || [])
                     });
 
                     const response = await fetch(`/api/generate-scripts-sse?${query}`, { method: 'GET' });
@@ -763,6 +943,9 @@
                                                 onChange: handleStructuredChange,
                                                 onConfirm: handleScriptsContinue,
                                                 showConfirm: true,
+                                                onGenerateComments: handleAppGenerateComments,
+                                                isGeneratingComments: isGenerating,
+                                                initialComments: parsedProductRef.current?.comments || [],
                                                 isWaiting: true
                                             });
 
@@ -794,6 +977,9 @@
                                                 onChange: handleStructuredChange,
                                                 onConfirm: handleScriptsContinue,
                                                 showConfirm: true,
+                                                onGenerateComments: handleAppGenerateComments,
+                                                isGeneratingComments: isGenerating,
+                                                initialComments: parsedProductRef.current?.comments || [],
                                                 isWaiting: true
                                             });
 

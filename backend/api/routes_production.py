@@ -275,3 +275,23 @@ def parse_product_stream(request: ParseProductStreamRequest):
             "X-Accel-Buffering": "no"
         }
     )
+
+
+@router.post("/generate-comments")
+def generate_comments(request: dict):
+    """
+    Generate mock user comments using AI based on product info
+    """
+    try:
+        product_name = request.get("product_name", "")
+        product_info = request.get("product_info", "")
+
+        comments = production_service.ai_service.generate_comments(
+            product_name=product_name,
+            product_info=product_info
+        )
+
+        return {"comments": comments}
+    except Exception as e:
+        logger.error(f"Generate comments failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
