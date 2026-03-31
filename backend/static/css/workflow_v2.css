@@ -626,6 +626,21 @@ body {
     cursor: not-allowed;
 }
 
+.btn-stop {
+    padding: 14px 24px;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-stop:hover {
+    opacity: 0.85;
+}
+
 /* ===== Initial State ===== */
 .initial-state {
     display: flex;

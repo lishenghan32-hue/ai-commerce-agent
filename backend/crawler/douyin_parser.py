@@ -52,6 +52,7 @@ def parse_douyin_product(url: str) -> Dict[str, Any]:
 
     print("正在使用 Playwright 抓取抖音商品...")
 
+    browser = None
     try:
         with sync_playwright() as p:
             # Check if storage file exists and has valid cookies
@@ -108,8 +109,6 @@ def parse_douyin_product(url: str) -> Dict[str, Any]:
             # ========== Use Playwright locator to extract data ==========
             result = _extract_with_locator(page)
 
-            browser.close()
-
             return result
 
     except Exception as e:
@@ -121,6 +120,13 @@ def parse_douyin_product(url: str) -> Dict[str, Any]:
             "ocr_text": "",
             "comments": []
         }
+    finally:
+        # Ensure browser is always closed
+        if browser:
+            try:
+                browser.close()
+            except Exception as e:
+                logger.warning(f"Failed to close browser: {e}")
 
 
 def _extract_with_ocr(page) -> str:
