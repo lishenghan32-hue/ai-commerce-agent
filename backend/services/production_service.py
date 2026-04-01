@@ -20,26 +20,33 @@ class ProductionService:
         comments: List[str] = None
     ) -> List[str]:
         """
-        Prepare and augment comments based on input
+        Prepare and augment comments based on input.
+        Strategy:
+        - If no comments provided: generate from selling_points or product info
+        - If comments < 3: supplement with generated comments to reach 3-5
+        - If comments >= 3: use as-is, truncate to 5
         """
         if comments is None:
             comments = []
 
+        # Case 1: No comments - generate from selling_points or product info
         if not comments:
             if selling_points:
                 comments = self.ai_service.convert_selling_points_to_comments(selling_points)
             else:
                 comments = self.ai_service.generate_comments(product_name, product_info)
-            return comments[:5]
+            return comments[:10]
 
+        # Case 2: Has comments but less than 3 - supplement
         if len(comments) < 3:
+            supplemental = []
             if selling_points:
-                converted = self.ai_service.convert_selling_points_to_comments(selling_points)
-                comments = list(comments) + converted
-            supplemental = self.ai_service.generate_comments(product_name, product_info)
+                supplemental.extend(self.ai_service.convert_selling_points_to_comments(selling_points))
+            supplemental.extend(self.ai_service.generate_comments(product_name, product_info))
             comments = list(comments) + supplemental
-            return comments[:5]
+            return comments[:10]
 
+        # Case 3: Already has 3+ comments - use as-is
         return comments[:5]
 
     def generate_script_from_comments(

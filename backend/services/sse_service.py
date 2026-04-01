@@ -192,6 +192,8 @@ def generate_parse_ocr_stream_events(
             "features": ocr_summary.get("features", []),
             "function": ocr_summary.get("function", ""),
             "scene": ocr_summary.get("scene", ""),
+            "target": ocr_summary.get("applicable", ""),  # Map applicable to target for script generation
+            "advantage": ocr_summary.get("raw_summary", ""),
             "applicable": ocr_summary.get("applicable", ""),
             "colors": ocr_summary.get("colors", ""),
             "season": ocr_summary.get("season", ""),

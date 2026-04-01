@@ -1,12 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Commerce - 工作流模式</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="/static/css/workflow_v2.css">
 </head>
 <body>
@@ -65,8 +66,13 @@
         function TextMessage({ status, children }) {
             return (
                 <div className="message-item">
-                    <span className="status-icon">{status}</span>
-                    <span className="message-text">{children}</span>
+                    <span className="status-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" fill="#111827"/>
+                            <circle cx="12" cy="12" r="4" fill="white"/>
+                        </svg>
+                    </span>
+                    <span className="message-text bold">{children}</span>
                 </div>
             );
         }
@@ -89,8 +95,7 @@
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">商品</span>
-                        <span className="card-title">解析结果</span>
+                        <h3>Product</h3>
                     </div>
                     <div className="product-grid">
                         <div className="product-item">
@@ -118,8 +123,7 @@
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">OCR</span>
-                        <span className="card-title">图片 {data.index}</span>
+                        <h3>OCR</h3>
                     </div>
                     <div className="ocr-text">
                         {data.status === 'loading' ? '识别中...' : data.text}
@@ -135,11 +139,8 @@
                 return (
                     <div className="card">
                         <div className="card-header">
-                            <span className="card-tag">OCR</span>
-                            <span className="card-title">AI 识别结果汇总</span>
-                            <span className="ai-badge">
-                                <span className="ai-icon">⚡</span> AI 分析
-                            </span>
+                            <h3>OCR Summary</h3>
+                            <span className="ai-badge">AI Assist</span>
                         </div>
                         <div className="ocr-summary">
                             {data.product_name && (
@@ -228,8 +229,7 @@
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">OCR</span>
-                        <span className="card-title">识别结果汇总</span>
+                        <h3>OCR Summary</h3>
                     </div>
                     <div className="ocr-summary">
                         {data.items && data.items.map((item, idx) => (
@@ -256,26 +256,6 @@
 
             return (
                 <div className="comments-section">
-                    {!hasTriggered && (
-                        <button
-                            type="button"
-                            className="generate-comments-btn"
-                            onClick={onGenerate}
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? (
-                                <span className="loading-text">
-                                    AI 生成评论中
-                                    <span className="loading-dots-inline">
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                    </span>
-                                </span>
-                            ) : '触发用户评论生成'}
-                        </button>
-                    )}
-
                     {hasTriggered && hasComments && (
                         <div className="comments-toggle">
                             <button
@@ -290,50 +270,74 @@
                         </div>
                     )}
 
-                    {hasTriggered && (
-                        <button
-                            type="button"
-                            className={`generate-comments-btn${hasComments ? ' generate-comments-btn-secondary' : ''}`}
-                            onClick={onGenerate}
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? (
-                                <span className="loading-text">
-                                    AI 生成评论中
-                                    <span className="loading-dots-inline">
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                    </span>
-                                </span>
-                            ) : (hasComments ? '重新生成评论' : '生成评论')}
-                        </button>
-                    )}
-
                     {hasTriggered && hasComments && !isCollapsed && (
-                        <div className="comments-list">
+                        <div className="comments-grid">
                             {comments.map((comment, idx) => (
                                 <div key={idx} className="comment-item">
                                     <label>评论 {idx + 1}</label>
-                                    <textarea
+                                    <input
+                                        type="text"
                                         value={comment}
                                         onChange={(e) => onChange(idx, e.target.value)}
-                                        placeholder={`输入用户评论 ${idx + 1}...`}
-                                        rows={2}
+                                        placeholder={`评论 ${idx + 1}...`}
                                     />
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    <button
-                        type="button"
-                        className="btn-confirm btn-continue"
-                        onClick={onContinue}
-                        disabled={isGenerating}
-                    >
-                        {isGenerating ? '处理中...' : (hasTriggered && hasComments ? '▶ 继续生成话术' : '跳过评论，直接生成话术')}
-                    </button>
+                    <div className="comments-buttons">
+                        {hasTriggered && (
+                            <button
+                                type="button"
+                                className={`generate-comments-btn${hasComments ? ' generate-comments-btn-secondary' : ''}`}
+                                onClick={onGenerate}
+                                disabled={isGenerating}
+                            >
+                                {isGenerating ? (
+                                    <span className="loading-text">
+                                        AI 生成评论中
+                                        <span className="loading-dots-inline">
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                        </span>
+                                    </span>
+                                ) : (hasComments ? '重新生成评论' : '生成评论')}
+                            </button>
+                        )}
+
+                        {hasTriggered && (
+                            <button
+                                type="button"
+                                className="btn-confirm btn-continue"
+                                onClick={onContinue}
+                                disabled={isGenerating}
+                            >
+                                {isGenerating ? '处理中...' : (hasTriggered && hasComments ? '继续生成话术' : '跳过评论，直接生成话术')}
+                            </button>
+                        )}
+
+                        {!hasTriggered && (
+                            <button
+                                type="button"
+                                className="generate-comments-btn"
+                                onClick={onGenerate}
+                                disabled={isGenerating}
+                            >
+                                {isGenerating ? (
+                                    <span className="loading-text">
+                                        AI 生成评论中
+                                        <span className="loading-dots-inline">
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                        </span>
+                                    </span>
+                                ) : '触发用户评论生成'}
+                            </button>
+                        )}
+                    </div>
                 </div>
             );
         }
@@ -399,25 +403,37 @@
 
             // Split fields into two columns: left column (first 5) and right column (remaining)
             const fieldEntries = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null);
-            const half = Math.ceil(fieldEntries.length / 2);
-            const leftFields = fieldEntries.slice(0, half);
-            const rightFields = fieldEntries.slice(half);
+            // Swap position of scene and raw_summary
+            const sortedFields = [];
+            const sceneIdx = fieldEntries.indexOf('scene');
+            const rawSummaryIdx = fieldEntries.indexOf('raw_summary');
+            if (sceneIdx !== -1 && rawSummaryIdx !== -1) {
+                fieldEntries.forEach(key => {
+                    if (key === 'scene') sortedFields.push('raw_summary');
+                    else if (key === 'raw_summary') sortedFields.push('scene');
+                    else sortedFields.push(key);
+                });
+            } else {
+                sortedFields.push(...fieldEntries);
+            }
+            const half = Math.ceil(sortedFields.length / 2);
+            const leftFields = sortedFields.slice(0, half);
+            const rightFields = sortedFields.slice(half);
 
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">结构化</span>
-                        <span className="card-title">商品信息提取</span>
-                        <span className="ai-badge">
-                            <span className="ai-icon">⚡</span> AI 推荐
-                        </span>
+                        <h3>Product Structure</h3>
+                        <span className="ai-badge">AI Assist</span>
                     </div>
 
                     {/* Two-column grid layout */}
                     <div className="structured-grid-two-col">
                         {/* Left column */}
                         <div className="structured-col">
-                            {leftFields.map(key => (
+                            {leftFields.map(key => {
+                                if (key === 'raw_summary') return null;
+                                return (
                                 <div className="structured-field" key={key}>
                                     <label>
                                         {fieldLabels[key] || key}
@@ -431,28 +447,21 @@
                                             </button>
                                         )}
                                     </label>
-                                    {key === 'raw_summary' ? (
-                                        <textarea
-                                            value={data[key] || ''}
-                                            onChange={(e) => handleFieldChange(key, e.target.value)}
-                                            className={editedFields[key] ? 'edited' : ''}
-                                            rows={4}
-                                            placeholder="详细汇总..."
-                                        />
-                                    ) : (
-                                        <input
-                                            value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
-                                            onChange={(e) => handleFieldChange(key, e.target.value)}
-                                            className={editedFields[key] ? 'edited' : ''}
-                                        />
-                                    )}
+                                    <input
+                                        value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
+                                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                                        className={editedFields[key] ? 'edited' : ''}
+                                    />
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {/* Right column */}
                         <div className="structured-col">
-                            {rightFields.map(key => (
+                            {rightFields.map(key => {
+                                if (key === 'raw_summary') return null;
+                                return (
                                 <div className="structured-field" key={key}>
                                     <label>
                                         {fieldLabels[key] || key}
@@ -466,25 +475,43 @@
                                             </button>
                                         )}
                                     </label>
-                                    {key === 'raw_summary' ? (
-                                        <textarea
-                                            value={data[key] || ''}
-                                            onChange={(e) => handleFieldChange(key, e.target.value)}
-                                            className={editedFields[key] ? 'edited' : ''}
-                                            rows={4}
-                                            placeholder="详细汇总..."
-                                        />
-                                    ) : (
-                                        <input
-                                            value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
-                                            onChange={(e) => handleFieldChange(key, e.target.value)}
-                                            className={editedFields[key] ? 'edited' : ''}
-                                        />
-                                    )}
+                                    <input
+                                        value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
+                                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                                        className={editedFields[key] ? 'edited' : ''}
+                                    />
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
+
+                    {/* Raw Summary - Full Width */}
+                    {data.raw_summary && (
+                        <div className="raw-summary-container">
+                            <div className="structured-field">
+                                <label>
+                                    {fieldLabels['raw_summary'] || '详细汇总'}
+                                    {editedFields['raw_summary'] && (
+                                        <button
+                                            className="reset-btn"
+                                            onClick={() => handleReset('raw_summary')}
+                                            title="恢复AI推荐"
+                                        >
+                                            ↩
+                                        </button>
+                                    )}
+                                </label>
+                                <textarea
+                                    value={data.raw_summary || ''}
+                                    onChange={(e) => handleFieldChange('raw_summary', e.target.value)}
+                                    className={editedFields['raw_summary'] ? 'edited' : ''}
+                                    rows={4}
+                                    placeholder="详细汇总..."
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Comments section below the card */}
                     {showConfirm && (
@@ -513,13 +540,12 @@
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">话术</span>
-                        <span className="card-title">直播带货话术</span>
+                        <h3>Live Script</h3>
                     </div>
                     {sections.map(section => (
                         <div className="script-section" key={section.key}>
                             <div className="script-section-label">{section.label}</div>
-                            <div className="script-section-content">{data[section.key]}</div>
+                            <div className="script-section-content" dangerouslySetInnerHTML={{ __html: marked.parse(data[section.key] || '') }} />
                         </div>
                     ))}
                 </div>
@@ -529,9 +555,7 @@
         function MarkdownMessage({ content }) {
             return (
                 <div className="message-item-no-avatar">
-                    <div className="markdown-message">
-                        <pre>{content}</pre>
-                    </div>
+                    <div className="markdown-message" dangerouslySetInnerHTML={{ __html: marked.parse(content || '') }} />
                 </div>
             );
         }
@@ -562,14 +586,21 @@
             if (message.type === 'text') {
                 return (
                     <div className="message-wrapper">
-                        <div className="message-avatar ai">AI</div>
                         <div className="message-content">
-                            {message.status && (
-                                <div className="message-item">
-                                    <span className="status-icon">{message.status}</span>
-                                </div>
-                            )}
                             <div className="message-bubble">
+                                {message.status && (
+                                    <span className="inline-status-icon">
+                                        {message.status === '✅' ? (
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                                <path d="M2.5 7L5.5 10.5L11.5 4.5" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                        ) : message.status === '⏹' ? (
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                                <rect x="3" y="3" width="8" height="8" rx="1" stroke="#111827" strokeWidth="2"/>
+                                            </svg>
+                                        ) : null}
+                                    </span>
+                                )}
                                 {message.content}
                             </div>
                         </div>
@@ -1038,6 +1069,7 @@
                                         // ocr_complete event - all images processed
                                         if (data.combined_text !== undefined) {
                                             setCompletedSteps(prev => [...new Set([...prev, 2])]);
+                                            setSubStep('图片识别完成');  // 更新顶部状态
                                             // 更新 OCR 开始的 loading 为完成消息
                                             updateLastMessage({
                                                 type: 'text',
@@ -1236,7 +1268,7 @@
                             <div className="header-right">
                                 <div className="eyebrow">Workflow</div>
                                 <div className="workflow-status">
-                                    ·Script generation in progress
+                                    Script generation in progress
                                 </div>
                             </div>
                         </div>
