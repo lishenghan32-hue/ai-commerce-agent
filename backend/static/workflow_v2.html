@@ -46,23 +46,15 @@
             return (
                 <div className="message-item-no-avatar">
                     <div className="line">
-                        <span className="loading-text">
-                            {text ? (
-                                <span>
-                                    {text.split('...')[0]}...
-                                    <span className="loading-dots-inline">
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                    </span>
-                                </span>
-                            ) : (
-                                <span className="loading-dots-inline">
-                                    <span className="loading-dot"></span>
-                                    <span className="loading-dot"></span>
-                                    <span className="loading-dot"></span>
-                                </span>
-                            )}
+                        <span className="loading-bubble">
+                            <span className="loading-label">
+                                {text ? text.split('...')[0] + '...' : 'Loading'}
+                            </span>
+                            <span className="loading-dots">
+                                <span className="loading-dot"></span>
+                                <span className="loading-dot"></span>
+                                <span className="loading-dot"></span>
+                            </span>
                         </span>
                     </div>
                 </div>
@@ -552,6 +544,7 @@
             if (isUser && message.type === 'text') {
                 return (
                     <div className="message-wrapper user">
+                        <div className="message-avatar user">U</div>
                         <div className="message-content">
                             <div className="message-bubble">
                                 {message.content}
@@ -565,9 +558,23 @@
                 return <LoadingBubble text={message.text} />;
             }
 
-            // 无边框文字消息
+            // 无边框文字消息 (带状态图标)
             if (message.type === 'text') {
-                return <TextMessage status={message.status}>{message.content}</TextMessage>;
+                return (
+                    <div className="message-wrapper">
+                        <div className="message-avatar ai">AI</div>
+                        <div className="message-content">
+                            {message.status && (
+                                <div className="message-item">
+                                    <span className="status-icon">{message.status}</span>
+                                </div>
+                            )}
+                            <div className="message-bubble">
+                                {message.content}
+                            </div>
+                        </div>
+                    </div>
+                );
             }
 
             // 多行消息（商品解析结果）
@@ -644,10 +651,14 @@
             const abortControllerRef = useRef(null);
             const bottomRef = useRef(null);
 
-            // Auto-scroll to bottom
+            // Auto-scroll to bottom - only scroll after completion or when content changes significantly
             useEffect(() => {
+                // Don't auto-scroll during parsing (currentStep === 1 and not completed)
+                if (currentStep === 1 && !completedSteps.includes(1)) {
+                    return; // Wait for parsing to complete
+                }
                 bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-            }, [messages]);
+            }, [messages, currentStep, completedSteps]);
 
             // Parse timer - Step 1 only
             useEffect(() => {
@@ -1210,16 +1221,67 @@
                 <div>
                     {/* Header */}
                     <header className="header">
-                        <h1>AI Commerce Agent</h1>
+                        <div className="header-inner">
+                            <div className="brand">
+                                <div className="mark">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                                <div className="brand-copy">
+                                    <h1>AI Commerce Agent</h1>
+                                    <p>script generation</p>
+                                </div>
+                            </div>
+                            <div className="header-right">
+                                <div className="eyebrow">Workflow</div>
+                                <div className="workflow-status">
+                                    ·Script generation in progress
+                                </div>
+                            </div>
+                        </div>
+                        {currentStep > 0 && (
+                            <div className="header-inner progress">
+                                <div className="current-state-label">Current state
+                                    <span className="current-state">
+                                        {subStep || (currentStep === 1 ? 'Parsing product' :
+                                            currentStep === 2 ? 'Running OCR' :
+                                            currentStep === 3 ? 'Building structure' :
+                                            currentStep === 4 ? 'Generating script' : 'Waiting')}
+                                    </span>
+                                </div>
+                                <div className="progress-steps">
+                                    <span className={completedSteps.includes(1) ? 'progress-step done' : (currentStep === 1 ? 'progress-step active' : 'progress-step')}>
+                                        Parse
+                                    </span>
+                                    <span className="progress-connector"></span>
+                                    <span className={completedSteps.includes(2) ? 'progress-step done' : (currentStep === 2 ? 'progress-step active' : 'progress-step')}>
+                                        OCR
+                                    </span>
+                                    <span className="progress-connector"></span>
+                                    <span className={completedSteps.includes(3) ? 'progress-step done' : (currentStep === 3 ? 'progress-step active' : 'progress-step')}>
+                                        Structure
+                                    </span>
+                                    <span className="progress-connector"></span>
+                                    <span className={completedSteps.includes(4) ? 'progress-step done' : (currentStep === 4 ? 'progress-step active' : 'progress-step')}>
+                                        Script
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </header>
 
                     {/* Main Content */}
-                    <main className="main-container" style={{ paddingTop: currentStep > 0 ? '90px' : '80px' }}>
+                    <main className="main-container">
                         {messages.length === 0 ? (
                             <div className="initial-state">
-                                <div className="initial-icon">🔄</div>
+                                <div className="initial-icon">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
                                 <div className="initial-title">AI Live Broadcast Script Generation Agent</div>
-                                <div className="initial-hint">输入商品链接开始执行直播话术生成智能体</div>
+                                <div className="initial-hint">顶栏采用极简悬浮，进度区采用时间轴式，让流程感更轻更高级。</div>
                             </div>
                         ) : (
                             <div className="messages-container">
@@ -1239,20 +1301,29 @@
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="请输入商品链接（支持抖音、淘宝、京东等）"
+                                    placeholder="Paste a product link from Douyin, Taobao, JD..."
                                     onKeyPress={(e) => e.key === 'Enter' && runFlow()}
                                 />
+                                {isGenerating && (
+                                    <button
+                                        className="btn-stop"
+                                        onClick={() => {
+                                            if (abortControllerRef.current) {
+                                                abortControllerRef.current.abort();
+                                                addMessage({ type: 'text', status: '⏹️', content: '用户中止执行', role: 'ai' });
+                                            }
+                                        }}
+                                    >
+                                        Stop
+                                    </button>
+                                )}
                                 <button
                                     id="start-btn"
-                                    className={isGenerating ? "btn-stop" : "btn-start"}
-                                    onClick={isGenerating ? () => {
-                                        if (abortControllerRef.current) {
-                                            abortControllerRef.current.abort();
-                                            addMessage({ type: 'text', status: '⏹️', content: '用户中止执行', role: 'ai' });
-                                        }
-                                    } : runFlow}
+                                    className="btn-start"
+                                    onClick={runFlow}
+                                    disabled={!input.trim() || isGenerating}
                                 >
-                                    {isGenerating ? '终止运行' : '开始生成'}
+                                    {isGenerating ? 'Running...' : 'Start'}
                                 </button>
                             </div>
                         </div>
