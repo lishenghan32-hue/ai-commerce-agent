@@ -742,15 +742,68 @@ body {
     font-weight: 600;
     color: #667eea;
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.section-emoji {
+    font-size: 14px;
+    line-height: 1;
 }
 
 .script-section-content {
     padding: 12px 14px;
-    background: #f9f9f9;
+    background: #fafafa;
     border-radius: 8px;
     font-size: 14px;
     line-height: 1.7;
-    color: #333;
+}
+
+/* Markdown styles inside script sections */
+.script-section-content p {
+    margin: 0 0 8px 0;
+}
+
+.script-section-content p:last-child {
+    margin-bottom: 0;
+}
+
+.script-section-content strong {
+    font-weight: 600;
+    color: #111827;
+}
+
+.script-section-content ul,
+.script-section-content ol {
+    margin: 0 0 8px 0;
+    padding-left: 20px;
+}
+
+.script-section-content li {
+    margin-bottom: 4px;
+}
+
+.script-section-content code {
+    padding: 1px 4px;
+    font-size: 0.9em;
+    background: #f3f4f6;
+    border-radius: 3px;
+    color: #c026d3;
+}
+
+.script-section-content pre {
+    margin: 8px 0;
+    padding: 10px 12px;
+    background: #1f2937;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+.script-section-content pre code {
+    padding: 0;
+    background: transparent;
+    color: #e5e7eb;
 }
 
 .script-section:last-child .script-section-content {
@@ -1178,51 +1231,188 @@ body {
     border-color: var(--accent);
 }
 
-.markdown-message {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    box-shadow: none;
+.markdown-content {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #374151;
+    background: #fff;
+    border: 1px solid rgba(219,228,238,0.8);
+    border-radius: 11px;
+    padding: 13px;
 }
 
-.markdown-message p {
-    margin: 0 0 8px 0;
-    line-height: 1.8;
+.markdown-content p {
+    margin: 0 0 12px 0;
 }
 
-.markdown-message p:last-child {
+.markdown-content p:last-child {
     margin-bottom: 0;
 }
 
-.markdown-message strong {
+/* Headings - ChatGPT style */
+.markdown-content h1 {
+    font-size: 1.5em;
     font-weight: 600;
-    color: var(--text);
+    margin: 24px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #111827;
 }
 
-.markdown-message em {
+.markdown-content h2 {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin: 20px 0 10px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #111827;
+}
+
+.markdown-content h3 {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin: 16px 0 8px 0;
+    color: #111827;
+}
+
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+    font-size: 1em;
+    font-weight: 600;
+    margin: 12px 0 6px 0;
+    color: #111827;
+}
+
+/* Bold and Italic */
+.markdown-content strong {
+    font-weight: 600;
+    color: #111827;
+}
+
+.markdown-content em {
     font-style: italic;
 }
 
-.markdown-message ul,
-.markdown-message ol {
-    margin: 0 0 8px 0;
-    padding-left: 20px;
+/* Links */
+.markdown-content a {
+    color: #2563eb;
+    text-decoration: none;
 }
 
-.markdown-message li {
-    margin-bottom: 4px;
+.markdown-content a:hover {
+    text-decoration: underline;
+}
+
+/* Lists - ChatGPT style */
+.markdown-content ul,
+.markdown-content ol {
+    margin: 0 0 12px 0;
+    padding-left: 24px;
+}
+
+.markdown-content li {
+    margin-bottom: 6px;
     line-height: 1.6;
 }
 
-.markdown-message pre {
+.markdown-content li + li {
+    margin-top: 4px;
+}
+
+.markdown-content ul li::marker {
+    color: #6b7280;
+}
+
+.markdown-content ol li::marker {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Blockquote - ChatGPT style */
+.markdown-content blockquote {
+    margin: 0 0 12px 0;
+    padding: 8px 16px;
+    background: #f9fafb;
+    border-left: 3px solid #d1d5db;
+    border-radius: 0 6px 6px 0;
+    color: #4b5563;
+    font-style: italic;
+}
+
+.markdown-content blockquote p {
     margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.8;
-    color: #666;
+}
+
+/* Code - ChatGPT style */
+.markdown-content code {
+    padding: 2px 6px;
+    margin: 0 2px;
+    font-size: 0.9em;
+    font-family: 'SF Mono', 'Consolas', 'Liberation Mono', Menlo, monospace;
+    background: #f3f4f6;
+    border-radius: 4px;
+    color: #c026d3;
+}
+
+.markdown-content pre {
+    margin: 0 0 12px 0;
+    padding: 12px 16px;
+    background: #1f2937;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.markdown-content pre code {
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    color: #e5e7eb;
+    font-size: 0.85em;
+    line-height: 1.5;
+}
+
+/* Horizontal Rule */
+.markdown-content hr {
+    margin: 20px 0;
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #d1d5db, transparent);
+}
+
+/* Table - GFM support */
+.markdown-content table {
+    width: 100%;
+    margin: 0 0 12px 0;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    text-align: left;
+}
+
+.markdown-content table th {
+    font-weight: 600;
+    background: #f9fafb;
+    color: #111827;
+}
+
+.markdown-content table tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+.markdown-content table tr:hover {
+    background: #f3f4f6;
+}
+
+/* Task lists (GFM) */
+.markdown-content input[type="checkbox"] {
+    margin-right: 8px;
+    accent-color: #2563eb;
 }
 
 .btn-continue {

@@ -530,11 +530,11 @@
 
         function ScriptsCard({ data }) {
             const sections = [
-                { key: 'opening_hook', label: '开头吸引' },
-                { key: 'pain_point', label: '痛点描述' },
-                { key: 'solution', label: '解决方案' },
-                { key: 'proof', label: '证明案例' },
-                { key: 'offer', label: '促单话术' }
+                { key: 'opening_hook', label: '开头吸引', emoji: '🔥' },
+                { key: 'pain_point', label: '痛点描述', emoji: '😣' },
+                { key: 'solution', label: '解决方案', emoji: '✨' },
+                { key: 'proof', label: '证明案例', emoji: '📊' },
+                { key: 'offer', label: '促单话术', emoji: '🎯' }
             ];
 
             return (
@@ -542,20 +542,27 @@
                     <div className="card-header">
                         <h3>Live Script</h3>
                     </div>
-                    {sections.map(section => (
+                    {sections.map(section => {
+                        const htmlContent = data[section.key] ? window.marked.parse(data[section.key]) : '';
+                        return (
                         <div className="script-section" key={section.key}>
-                            <div className="script-section-label">{section.label}</div>
-                            <div className="script-section-content" dangerouslySetInnerHTML={{ __html: marked.parse(data[section.key] || '') }} />
+                            <div className="script-section-label">
+                                <span className="section-emoji">{section.emoji}</span>
+                                {section.label}
+                            </div>
+                            <div className="script-section-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             );
         }
 
         function MarkdownMessage({ content }) {
+            const htmlContent = content ? window.marked.parse(content) : '';
             return (
                 <div className="message-item-no-avatar">
-                    <div className="markdown-message" dangerouslySetInnerHTML={{ __html: marked.parse(content || '') }} />
+                    <div className="markdown-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
                 </div>
             );
         }
@@ -678,6 +685,7 @@
             const [completedSteps, setCompletedSteps] = useState([]);
             const [isGenerating, setIsGenerating] = useState(false);
             const [parseElapsedSeconds, setParseElapsedSeconds] = useState(0);
+            const [scriptElapsedSeconds, setScriptElapsedSeconds] = useState(0);
             const parsedProductRef = useRef(null);
             const abortControllerRef = useRef(null);
             const bottomRef = useRef(null);
@@ -706,7 +714,22 @@
                 return () => clearInterval(timer);
             }, [currentStep, completedSteps]);
 
-            // Update loading message with timer
+            // Script timer - Step 4 only (runs while generating, stops when complete)
+            useEffect(() => {
+                // Start timer when step 4 begins, stop when completed
+                if (currentStep !== 4 || completedSteps.includes(4)) {
+                    setScriptElapsedSeconds(0);
+                    return;
+                }
+
+                const timer = setInterval(() => {
+                    setScriptElapsedSeconds(prev => prev + 1);
+                }, 1000);
+
+                return () => clearInterval(timer);
+            }, [currentStep, completedSteps]);
+
+            // Update loading message with parse timer
             useEffect(() => {
                 if (currentStep !== 1 || completedSteps.includes(1)) {
                     return;
@@ -728,6 +751,29 @@
                     return next;
                 });
             }, [parseElapsedSeconds, currentStep, completedSteps]);
+
+            // Update loading message with script timer
+            useEffect(() => {
+                // Stop updating when script generation is complete
+                if (currentStep !== 4 || completedSteps.includes(4)) {
+                    return;
+                }
+
+                setMessages(prev => {
+                    const next = [...prev];
+                    const lastIndex = next.length - 1;
+                    const lastMessage = next[lastIndex];
+                    if (!lastMessage || lastMessage.type !== 'text' || lastMessage.content?.startsWith('正在生成话术...') === false) return prev;
+
+                    const nextContent = scriptElapsedSeconds > 0
+                        ? `正在生成话术...（${scriptElapsedSeconds}秒）`
+                        : '正在生成话术...';
+
+                    if (lastMessage.content === nextContent) return prev;
+                    next[lastIndex] = { ...lastMessage, content: nextContent };
+                    return next;
+                });
+            }, [scriptElapsedSeconds, currentStep, completedSteps]);
 
             // Add message
             const addMessage = (message) => {
@@ -818,6 +864,10 @@
                 setIsWaitingUser(false);
                 setCurrentStep(4);
                 setSubStep('正在生成话术...');
+                setScriptElapsedSeconds(0); // 重置计时器
+
+                // 移除已完成标记，允许计时器重新启动
+                setCompletedSteps(prev => prev.filter(step => step !== 4));
 
                 // 添加开始生成话术的消息
                 addMessage({
