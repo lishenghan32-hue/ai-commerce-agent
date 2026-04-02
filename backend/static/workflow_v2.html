@@ -213,12 +213,107 @@
                                 </div>
                             )}
 
-                            {data.raw_summary && (
+                            {data.brief_summary && (
                                 <div className="ocr-summary-item">
-                                    <div className="ocr-summary-header">📋 详细汇总</div>
-                                    <div className="ocr-summary-text" style={{whiteSpace: 'pre-wrap'}}>
-                                        {data.raw_summary}
+                                    <div className="ocr-summary-header">📌 核心卖点</div>
+                                    <div className="ocr-summary-text" style={{fontWeight: 'bold', color: '#667eea'}}>
+                                        {data.brief_summary}
                                     </div>
+                                </div>
+                            )}
+
+                            {data.detailed_summary && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📋 详细描述</div>
+                                    <div className="ocr-summary-text" style={{whiteSpace: 'pre-wrap'}}>
+                                        {data.detailed_summary}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 服装特有字段 */}
+                            {data.thickness && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📏 厚度</div>
+                                    <div className="ocr-summary-text">{data.thickness}</div>
+                                </div>
+                            )}
+                            {data.style && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🎽 款式</div>
+                                    <div className="ocr-summary-text">{data.style}</div>
+                                </div>
+                            )}
+
+                            {/* 食品特有字段 */}
+                            {data.ingredients && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">配料表</div>
+                                    <div className="ocr-summary-text">{data.ingredients}</div>
+                                </div>
+                            )}
+                            {data.shelf_life && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📅 保质期</div>
+                                    <div className="ocr-summary-text">{data.shelf_life}</div>
+                                </div>
+                            )}
+                            {data.origin && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📍 产地</div>
+                                    <div className="ocr-summary-text">{data.origin}</div>
+                                </div>
+                            )}
+                            {data.spec && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📦 规格</div>
+                                    <div className="ocr-summary-text">{data.spec}</div>
+                                </div>
+                            )}
+
+                            {/* 电子产品特有字段 */}
+                            {data.model && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🔧 型号</div>
+                                    <div className="ocr-summary-text">{data.model}</div>
+                                </div>
+                            )}
+                            {data.power && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">⚡ 功率</div>
+                                    <div className="ocr-summary-text">{data.power}</div>
+                                </div>
+                            )}
+                            {data.battery && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🔋 续航</div>
+                                    <div className="ocr-summary-text">{data.battery}</div>
+                                </div>
+                            )}
+                            {data.compatible && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📱 兼容系统</div>
+                                    <div className="ocr-summary-text">{data.compatible}</div>
+                                </div>
+                            )}
+
+                            {/* 美妆特有字段 */}
+                            {data.effect && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">✨ 功效</div>
+                                    <div className="ocr-summary-text">{data.effect}</div>
+                                </div>
+                            )}
+                            {data.skin_type && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">👩 适用肤质</div>
+                                    <div className="ocr-summary-text">{data.skin_type}</div>
+                                </div>
+                            )}
+                            {data.usage && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📝 使用方法</div>
+                                    <div className="ocr-summary-text">{data.usage}</div>
                                 </div>
                             )}
                         </div>
@@ -391,6 +486,7 @@
 
             const fieldLabels = {
                 title: '商品名称',
+                product_type: '商品类型',
                 material: '材质',
                 features: '特点',
                 function: '功能',
@@ -398,27 +494,28 @@
                 applicable: '适用',
                 colors: '颜色',
                 season: '季节',
-                raw_summary: '详细汇总'
+                brief_summary: '核心卖点',
+                detailed_summary: '详细描述',
+                thickness: '厚度',
+                style: '款式',
+                ingredients: '配料表',
+                shelf_life: '保质期',
+                origin: '产地',
+                spec: '规格',
+                model: '型号',
+                power: '功率',
+                battery: '续航',
+                compatible: '兼容系统',
+                effect: '功效',
+                skin_type: '适用肤质',
+                usage: '使用方法'
             };
 
-            // Split fields into two columns: left column (first 5) and right column (remaining)
-            const fieldEntries = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null);
-            // Swap position of scene and raw_summary
-            const sortedFields = [];
-            const sceneIdx = fieldEntries.indexOf('scene');
-            const rawSummaryIdx = fieldEntries.indexOf('raw_summary');
-            if (sceneIdx !== -1 && rawSummaryIdx !== -1) {
-                fieldEntries.forEach(key => {
-                    if (key === 'scene') sortedFields.push('raw_summary');
-                    else if (key === 'raw_summary') sortedFields.push('scene');
-                    else sortedFields.push(key);
-                });
-            } else {
-                sortedFields.push(...fieldEntries);
-            }
-            const half = Math.ceil(sortedFields.length / 2);
-            const leftFields = sortedFields.slice(0, half);
-            const rightFields = sortedFields.slice(half);
+            // Split fields into two columns
+            const fieldEntries = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null && data[key] !== '');
+            const half = Math.ceil(fieldEntries.length / 2);
+            const leftFields = fieldEntries.slice(0, half);
+            const rightFields = fieldEntries.slice(half);
 
             return (
                 <div className="card">
@@ -432,7 +529,7 @@
                         {/* Left column */}
                         <div className="structured-col">
                             {leftFields.map(key => {
-                                if (key === 'raw_summary') return null;
+                                if (key === 'detailed_summary') return null;
                                 return (
                                 <div className="structured-field" key={key}>
                                     <label>
@@ -460,7 +557,7 @@
                         {/* Right column */}
                         <div className="structured-col">
                             {rightFields.map(key => {
-                                if (key === 'raw_summary') return null;
+                                if (key === 'detailed_summary') return null;
                                 return (
                                 <div className="structured-field" key={key}>
                                     <label>
@@ -486,16 +583,16 @@
                         </div>
                     </div>
 
-                    {/* Raw Summary - Full Width */}
-                    {data.raw_summary && (
+                    {/* Detailed Summary - Full Width */}
+                    {data.detailed_summary && (
                         <div className="raw-summary-container">
                             <div className="structured-field">
                                 <label>
-                                    {fieldLabels['raw_summary'] || '详细汇总'}
-                                    {editedFields['raw_summary'] && (
+                                    {fieldLabels['detailed_summary'] || '详细描述'}
+                                    {editedFields['detailed_summary'] && (
                                         <button
                                             className="reset-btn"
-                                            onClick={() => handleReset('raw_summary')}
+                                            onClick={() => handleReset('detailed_summary')}
                                             title="恢复AI推荐"
                                         >
                                             ↩
@@ -503,11 +600,11 @@
                                     )}
                                 </label>
                                 <textarea
-                                    value={data.raw_summary || ''}
-                                    onChange={(e) => handleFieldChange('raw_summary', e.target.value)}
-                                    className={editedFields['raw_summary'] ? 'edited' : ''}
-                                    rows={4}
-                                    placeholder="详细汇总..."
+                                    value={data.detailed_summary || ''}
+                                    onChange={(e) => handleFieldChange('detailed_summary', e.target.value)}
+                                    className={editedFields['detailed_summary'] ? 'edited' : ''}
+                                    rows={6}
+                                    placeholder="详细描述..."
                                 />
                             </div>
                         </div>
@@ -814,20 +911,21 @@
             const handleAppGenerateComments = async () => {
                 const productData = parsedProductRef.current || {};
                 const productName = productData.name || structuredData.title || '';
-                const productInfo = productData.selling_points || structuredData.raw_summary || '';
+                const productInfo = productData.selling_points || structuredData.detailed_summary || structuredData.brief_summary || '';
 
                 setIsGenerating(true);
 
                 try {
                     const callGenerateCommentsAPI = window.API && window.API.callGenerateCommentsAPI
                         ? window.API.callGenerateCommentsAPI
-                        : async (name, info) => {
+                        : async (name, info, structured) => {
                             const response = await fetch('/api/generate-comments', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     product_name: name || '',
-                                    product_info: info || ''
+                                    product_info: info || '',
+                                    structured: structured || null
                                 })
                             });
                             if (!response.ok) {
@@ -843,7 +941,7 @@
                             return response.json();
                         };
 
-                    const result = await callGenerateCommentsAPI(productName, productInfo);
+                    const result = await callGenerateCommentsAPI(productName, productInfo, structuredData);
                     return result.comments || [];
                 } catch (error) {
                     console.error('Generate comments error:', error);
@@ -865,8 +963,6 @@
                 setCurrentStep(4);
                 setSubStep('正在生成话术...');
                 setScriptElapsedSeconds(0); // 重置计时器
-
-                // 移除已完成标记，允许计时器重新启动
                 setCompletedSteps(prev => prev.filter(step => step !== 4));
 
                 // 添加开始生成话术的消息
@@ -877,8 +973,21 @@
                     role: 'ai'
                 });
 
-                const currentStructured = structuredData;
                 const productData = parsedProductRef.current || {};
+
+                // 修复：检查对象是否有实际内容，而不是直接判断真值
+                // productData.structured 可能是空对象 {}，但在 JS 中是 truthy
+                const hasProductStructured = productData.structured &&
+                    Object.keys(productData.structured).some(k => productData.structured[k]);
+                const hasStructuredData = structuredData &&
+                    Object.keys(structuredData).some(k => structuredData[k]);
+
+                const currentStructured = hasProductStructured ? productData.structured :
+                                          hasStructuredData ? structuredData : {};
+
+                console.log('[生成话术] currentStructured:', currentStructured);
+                console.log('[生成话术] productData:', productData);
+                console.log('[生成话术] comments:', comments);
 
                 try {
                     const query = new URLSearchParams({
@@ -890,6 +999,8 @@
                         comments: JSON.stringify(comments || productData.comments || [])
                     });
 
+                    console.log('[生成话术] API URL:', `/api/generate-scripts-sse?${query}`);
+
                     const response = await fetch(`/api/generate-scripts-sse?${query}`, { method: 'GET' });
 
                     if (!response.ok) throw new Error('话术生成失败');
@@ -899,17 +1010,21 @@
 
                     let script = createEmptyScript();
                     let currentField = '';
+                    let eventCount = 0;
 
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
 
                         const text = decoder.decode(value);
+                        console.log('[SSE原始数据]:', text);
                         const lines = text.split('\n');
 
                         for (const line of lines) {
                             if (line.startsWith('data: ')) {
                                 const dataStr = line.slice(6);
+                                eventCount++;
+                                console.log('[SSE事件' + eventCount + ']:', dataStr);
                                 try {
                                     const data = JSON.parse(dataStr);
 
@@ -918,6 +1033,7 @@
                                         currentField = data.field;
                                         script[currentField] = [];
                                         setSubStep(`正在生成${data.label}...`);
+                                        console.log('[SSE] 新section:', data.field);
                                     }
 
                                     // script_chunk event
@@ -927,6 +1043,7 @@
                                             script[data.field] = [];
                                         }
                                         script[data.field].push(data.content);
+                                        console.log('[SSE] chunk:', data.field, data.content);
 
                                         const markdown = formatScriptMarkdown(script);
                                         setSubStep(`正在生成${getSectionLabel(currentField)}...`);
@@ -942,6 +1059,7 @@
                                     if (data.completed !== undefined) {
                                         setSubStep('');
                                         setCompletedSteps(prev => [...prev, 4]);
+                                        console.log('[SSE] script_complete');
                                     }
 
                                 } catch (e) {
@@ -950,6 +1068,8 @@
                             }
                         }
                     }
+
+                    console.log('[生成话术] 最终script:', script);
 
                     if (Object.keys(script).length === 0) {
                         throw new Error('话术生成失败');
@@ -1149,6 +1269,7 @@
                                             // 改为文字消息形式显示 OCR 汇总
                                             const lines = [];
                                             if (data.product_name) lines.push({ status: '商品名称：', text: data.product_name });
+                                            if (data.product_type) lines.push({ status: '商品类型：', text: data.product_type });
                                             if (data.material) lines.push({ status: '材质：', text: data.material });
                                             if (data.features && data.features.length > 0) {
                                                 lines.push({ status: '特点：', text: data.features.join('、') });
@@ -1158,7 +1279,8 @@
                                             if (data.applicable) lines.push({ status: '适用：', text: data.applicable });
                                             if (data.colors) lines.push({ status: '颜色：', text: data.colors });
                                             if (data.season) lines.push({ status: '季节：', text: data.season });
-                                            if (data.raw_summary) lines.push({ status: '详细汇总：', text: data.raw_summary });
+                                            if (data.brief_summary) lines.push({ status: '核心卖点：', text: data.brief_summary });
+                                            if (data.detailed_summary) lines.push({ status: '详细描述：', text: data.detailed_summary });
 
                                             if (lines.length > 0) {
                                                 addMessage({ type: 'lines', lines, role: 'ai' });
@@ -1170,6 +1292,7 @@
                                                 cardType: 'structured',
                                                 data: {
                                                     title: data.product_name || '',
+                                                    product_type: data.product_type || '',
                                                     material: data.material || '',
                                                     features: data.features || [],
                                                     function: data.function || '',
@@ -1177,7 +1300,21 @@
                                                     applicable: data.applicable || '',
                                                     colors: data.colors || '',
                                                     season: data.season || '',
-                                                    raw_summary: data.raw_summary || ''
+                                                    brief_summary: data.brief_summary || '',
+                                                    detailed_summary: data.detailed_summary || '',
+                                                    thickness: data.thickness || '',
+                                                    style: data.style || '',
+                                                    ingredients: data.ingredients || '',
+                                                    shelf_life: data.shelf_life || '',
+                                                    origin: data.origin || '',
+                                                    spec: data.spec || '',
+                                                    model: data.model || '',
+                                                    power: data.power || '',
+                                                    battery: data.battery || '',
+                                                    compatible: data.compatible || '',
+                                                    effect: data.effect || '',
+                                                    skin_type: data.skin_type || '',
+                                                    usage: data.usage || ''
                                                 },
                                                 role: 'ai',
                                                 onChange: handleStructuredChange,

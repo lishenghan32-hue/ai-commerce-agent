@@ -17,32 +17,29 @@ class ProductionService:
         product_name: str = "",
         product_info: str = "",
         selling_points: str = "",
-        comments: List[str] = None
+        comments: List[str] = None,
+        structured: Dict[str, Any] = None
     ) -> List[str]:
         """
         Prepare and augment comments based on input.
         Strategy:
-        - If no comments provided: generate from selling_points or product info
-        - If comments < 3: supplement with generated comments to reach 3-5
+        - If no comments provided: generate from product info
+        - If comments < 3: supplement with generated comments
         - If comments >= 3: use as-is, truncate to 5
         """
         if comments is None:
             comments = []
+        if structured is None:
+            structured = {}
 
-        # Case 1: No comments - generate from selling_points or product info
+        # Case 1: No comments - generate from product info
         if not comments:
-            if selling_points:
-                comments = self.ai_service.convert_selling_points_to_comments(selling_points)
-            else:
-                comments = self.ai_service.generate_comments(product_name, product_info)
+            comments = self.ai_service.generate_comments(product_name, product_info, structured)
             return comments[:10]
 
         # Case 2: Has comments but less than 3 - supplement
         if len(comments) < 3:
-            supplemental = []
-            if selling_points:
-                supplemental.extend(self.ai_service.convert_selling_points_to_comments(selling_points))
-            supplemental.extend(self.ai_service.generate_comments(product_name, product_info))
+            supplemental = self.ai_service.generate_comments(product_name, product_info, structured)
             comments = list(comments) + supplemental
             return comments[:10]
 
@@ -83,18 +80,58 @@ class ProductionService:
             product_name=product_name,
             product_info=product_info,
             selling_points=selling_points,
-            comments=comments
+            comments=comments,
+            structured=structured
         )
 
         logger.info(f"最终商品名: {product_name}")
         logger.info(f"最终卖点: {selling_points}")
         logger.info(f"最终评论: {prepared_comments}")
 
-        if not prepared_comments:
-            prepared_comments = self.ai_service.generate_comments(product_name, product_info)
+        # 从评论中提取 insights（简单的关键词提取作为洞察）
+        insights = self._extract_insights_from_comments(prepared_comments)
 
-        insights = self.ai_service.analyze_comments(prepared_comments)
-        return self.ai_service.generate_single_style_script(insights, structured=structured)
+        # 融合 structured 和 insights 生成话术
+        return self.ai_service.generate_single_style_script(
+            insights=insights,
+            structured=structured
+        )
+
+    def _extract_insights_from_comments(self, comments: List[str]) -> Dict[str, Any]:
+        """
+        从评论中提取简单洞察（关键词和情感）
+        这是一个轻量级的分析，不依赖额外 AI 调用
+        """
+        if not comments:
+            return {}
+
+        # 简单的关键词统计和情感倾向判断
+        pain_keywords = []
+        positive_keywords = []
+        negative_keywords = []
+
+        pain_words = ['贵', '慢', '差', '不好', '失望', '坑', '后悔', '难', '不舒服', '小', '褪色', '起球']
+        positive_words = ['好', '不错', '喜欢', '满意', '推荐', '回购', '快', '漂亮', '舒服', '值', '赞']
+        negative_words = ['贵', '慢', '差', '失望', '后悔', '不值', '麻烦']
+
+        all_text = ' '.join(comments)
+
+        for word in pain_words:
+            if word in all_text:
+                pain_keywords.append(word)
+        for word in positive_words:
+            if word in all_text:
+                positive_keywords.append(word)
+        for word in negative_words:
+            if word in all_text:
+                negative_keywords.append(word)
+
+        return {
+            "pain_points": list(set(pain_keywords))[:5],
+            "selling_points": list(set(positive_keywords))[:5],
+            "concerns": list(set(negative_keywords))[:3],
+            "use_cases": []
+        }
 
     def rewrite_script(self, script: Dict[str, Any], mode: str) -> Dict[str, Any]:
         """

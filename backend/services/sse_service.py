@@ -65,9 +65,23 @@ def generate_sse_events(
             structured=structured
         )
 
+        logger.info(f"SSE 生成的话术: {script}")
+
         yield "event: progress\ndata: {\"step\": 0, \"status\": \"completed\", \"message\": \"输入处理完成\"}\n\n"
         yield "event: progress\ndata: {\"step\": 1, \"status\": \"completed\", \"message\": \"评论分析完成\"}\n\n"
         yield "event: progress\ndata: {\"step\": 2, \"status\": \"active\", \"message\": \"正在生成话术...\"}\n\n"
+
+        # 确保 script 有内容再发送
+        has_content = any(script.get(field) for field in ["opening_hook", "pain_point", "solution", "proof", "offer"])
+        if not has_content:
+            logger.warning("生成的话术为空，使用默认内容")
+            script = {
+                "opening_hook": "今天给大家介绍一款非常不错的产品",
+                "pain_point": "相信大家都有过类似的困扰",
+                "solution": "这款产品正好解决了这个问题",
+                "proof": "已经有很多朋友反馈效果很好",
+                "offer": "感兴趣的朋友可以了解一下"
+            }
 
         yield from _stream_script(script, chunk_size=10)
 
@@ -154,6 +168,7 @@ def generate_parse_ocr_stream_events(
                 logger.error(f"OCR summary extraction failed: {e}")
                 ocr_summary = {
                     "product_name": product_name,
+                    "product_type": "",
                     "material": "",
                     "features": [],
                     "function": "",
@@ -161,7 +176,21 @@ def generate_parse_ocr_stream_events(
                     "applicable": "",
                     "colors": "",
                     "season": "",
-                    "raw_summary": ""
+                    "brief_summary": "",
+                    "detailed_summary": "",
+                    "thickness": "",
+                    "style": "",
+                    "ingredients": "",
+                    "shelf_life": "",
+                    "origin": "",
+                    "spec": "",
+                    "model": "",
+                    "power": "",
+                    "battery": "",
+                    "compatible": "",
+                    "effect": "",
+                    "skin_type": "",
+                    "usage": ""
                 }
 
             ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
@@ -192,12 +221,28 @@ def generate_parse_ocr_stream_events(
             "features": ocr_summary.get("features", []),
             "function": ocr_summary.get("function", ""),
             "scene": ocr_summary.get("scene", ""),
-            "target": ocr_summary.get("applicable", ""),  # Map applicable to target for script generation
-            "advantage": ocr_summary.get("raw_summary", ""),
+            "target": ocr_summary.get("applicable", ""),
+            "advantage": ocr_summary.get("detailed_summary", ""),
             "applicable": ocr_summary.get("applicable", ""),
             "colors": ocr_summary.get("colors", ""),
             "season": ocr_summary.get("season", ""),
-            "raw_summary": ocr_summary.get("raw_summary", "")
+            "brief_summary": ocr_summary.get("brief_summary", ""),
+            "detailed_summary": ocr_summary.get("detailed_summary", ""),
+            # 商品类型特有字段
+            "product_type": ocr_summary.get("product_type", ""),
+            "thickness": ocr_summary.get("thickness", ""),
+            "style": ocr_summary.get("style", ""),
+            "ingredients": ocr_summary.get("ingredients", ""),
+            "shelf_life": ocr_summary.get("shelf_life", ""),
+            "origin": ocr_summary.get("origin", ""),
+            "spec": ocr_summary.get("spec", ""),
+            "model": ocr_summary.get("model", ""),
+            "power": ocr_summary.get("power", ""),
+            "battery": ocr_summary.get("battery", ""),
+            "compatible": ocr_summary.get("compatible", ""),
+            "effect": ocr_summary.get("effect", ""),
+            "skin_type": ocr_summary.get("skin_type", ""),
+            "usage": ocr_summary.get("usage", "")
         }
 
         structure_data = json.dumps(structured, ensure_ascii=False)
