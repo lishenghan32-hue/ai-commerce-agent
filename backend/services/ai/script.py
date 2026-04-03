@@ -16,8 +16,10 @@ class AIServiceScriptMixin(BaseAIService):
 
     def generate_single_style_script(
         self,
-        insights: Dict[str, Any],
-        structured: Dict[str, Any] = None
+        insights: Dict[str, Any] = None,
+        structured: Dict[str, Any] = None,
+        product_context: Dict[str, Any] = None,
+        comment_context: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """
         Generate a single live streaming script (带货型)
@@ -33,6 +35,10 @@ class AIServiceScriptMixin(BaseAIService):
             insights = {}
         if structured is None:
             structured = {}
+        if product_context is None:
+            product_context = {}
+        if comment_context is None:
+            comment_context = {}
 
         # 检查是否有任何结构化数据（OCR 返回的字段名）
         has_structured = any([
@@ -72,11 +78,19 @@ class AIServiceScriptMixin(BaseAIService):
             structured.get("usage"),
         ])
 
-        if not insights and not has_structured:
+        has_product_context = any(product_context.values())
+        has_comment_context = any(comment_context.values())
+
+        if not insights and not has_structured and not has_product_context and not has_comment_context:
             return self._default_script()
 
         try:
-            prompt = prompts.build_single_style_script_prompt(insights, structured)
+            prompt = prompts.build_single_style_script_prompt(
+                product_context=product_context,
+                comment_context=comment_context,
+                insights=insights,
+                structured=structured,
+            )
             logger.info(f"生成话术的prompt长度: {len(prompt)}")
             raw_response = self._call_api(prompt)
             logger.info(f"AI返回的原始响应: {raw_response[:200]}...")

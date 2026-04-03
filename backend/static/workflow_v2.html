@@ -896,6 +896,15 @@
             // Handle structured field change
             const handleStructuredChange = (key, value) => {
                 setStructuredData(prev => ({ ...prev, [key]: value }));
+                if (parsedProductRef.current) {
+                    parsedProductRef.current = {
+                        ...parsedProductRef.current,
+                        structured: {
+                            ...(parsedProductRef.current.structured || {}),
+                            [key]: value
+                        }
+                    };
+                }
                 setMessages(prev => {
                     const newMessages = [...prev];
                     const lastIdx = newMessages.length - 1;
@@ -912,8 +921,11 @@
             // Generate comments using AI
             const handleAppGenerateComments = async () => {
                 const productData = parsedProductRef.current || {};
-                const productName = productData.name || structuredData.title || '';
-                const productInfo = productData.selling_points || structuredData.detailed_summary || structuredData.brief_summary || '';
+                const currentStructured = (structuredData && Object.keys(structuredData).some(k => structuredData[k]))
+                    ? structuredData
+                    : (productData.structured || {});
+                const productName = productData.name || currentStructured.title || '';
+                const productInfo = productData.selling_points || currentStructured.detailed_summary || currentStructured.brief_summary || '';
 
                 setIsGenerating(true);
 
@@ -943,7 +955,7 @@
                             return response.json();
                         };
 
-                    const result = await callGenerateCommentsAPI(productName, productInfo, structuredData);
+                    const result = await callGenerateCommentsAPI(productName, productInfo, currentStructured);
                     return result.comments || [];
                 } catch (error) {
                     console.error('Generate comments error:', error);
@@ -1018,8 +1030,8 @@
                     };
                     console.log('[生成话术] 从 productData 构建的 structured:', currentStructured);
                 } else {
-                    currentStructured = hasProductStructured ? productData.structured :
-                                              hasStructuredData ? structuredData : {};
+                    currentStructured = hasStructuredData ? structuredData :
+                                              hasProductStructured ? productData.structured : {};
                 }
 
                 console.log('[生成话术] currentStructured:', currentStructured);
@@ -1295,9 +1307,40 @@
                                         // ocr_summary_complete event - AI 提取结构化信息
                                         if (data.features !== undefined) {
                                             setSubStep('AI 提取结构化信息');
-                                            // 保存结构化数据供后续使用
-                                            setStructuredData(data);
-                                            console.log('[SSE] 完整流程中设置 structuredData:', data);
+                                            const normalizedStructured = {
+                                                title: data.product_name || '',
+                                                product_type: data.product_type || '',
+                                                material: data.material || '',
+                                                features: data.features || [],
+                                                function: data.function || '',
+                                                scene: data.scene || '',
+                                                applicable: data.applicable || '',
+                                                colors: data.colors || '',
+                                                season: data.season || '',
+                                                brief_summary: data.brief_summary || '',
+                                                detailed_summary: data.detailed_summary || '',
+                                                thickness: data.thickness || '',
+                                                style: data.style || '',
+                                                ingredients: data.ingredients || '',
+                                                shelf_life: data.shelf_life || '',
+                                                origin: data.origin || '',
+                                                spec: data.spec || '',
+                                                model: data.model || '',
+                                                power: data.power || '',
+                                                battery: data.battery || '',
+                                                compatible: data.compatible || '',
+                                                effect: data.effect || '',
+                                                skin_type: data.skin_type || '',
+                                                usage: data.usage || ''
+                                            };
+                                            setStructuredData(normalizedStructured);
+                                            if (parsedProductRef.current) {
+                                                parsedProductRef.current = {
+                                                    ...parsedProductRef.current,
+                                                    structured: normalizedStructured
+                                                };
+                                            }
+                                            console.log('[SSE] 完整流程中设置 structuredData:', normalizedStructured);
                                             // 更新 loading 为 AI 汇总完成消息
                                             updateLastMessage({
                                                 type: 'text',
@@ -1330,32 +1373,7 @@
                                             addMessage({
                                                 type: 'card',
                                                 cardType: 'structured',
-                                                data: {
-                                                    title: data.product_name || '',
-                                                    product_type: data.product_type || '',
-                                                    material: data.material || '',
-                                                    features: data.features || [],
-                                                    function: data.function || '',
-                                                    scene: data.scene || '',
-                                                    applicable: data.applicable || '',
-                                                    colors: data.colors || '',
-                                                    season: data.season || '',
-                                                    brief_summary: data.brief_summary || '',
-                                                    detailed_summary: data.detailed_summary || '',
-                                                    thickness: data.thickness || '',
-                                                    style: data.style || '',
-                                                    ingredients: data.ingredients || '',
-                                                    shelf_life: data.shelf_life || '',
-                                                    origin: data.origin || '',
-                                                    spec: data.spec || '',
-                                                    model: data.model || '',
-                                                    power: data.power || '',
-                                                    battery: data.battery || '',
-                                                    compatible: data.compatible || '',
-                                                    effect: data.effect || '',
-                                                    skin_type: data.skin_type || '',
-                                                    usage: data.usage || ''
-                                                },
+                                                data: normalizedStructured,
                                                 role: 'ai',
                                                 onChange: handleStructuredChange,
                                                 onConfirm: handleScriptsContinue,
@@ -1376,6 +1394,12 @@
                                             setCurrentStep(3);
                                             setCompletedSteps(prev => [...new Set([...prev, 2, 3])]);
                                             setStructuredData(data);
+                                            if (parsedProductRef.current) {
+                                                parsedProductRef.current = {
+                                                    ...parsedProductRef.current,
+                                                    structured: data
+                                                };
+                                            }
 
                                             console.log('[SSE] 设置 structuredData:', data);
 

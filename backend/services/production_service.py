@@ -1,9 +1,31 @@
 """
 Production Service - Combine comment analysis and script generation
 """
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from backend.services.ai import get_ai_service
+
+
+POSITIVE_COMMENT_KEYWORDS = [
+    "舒服", "舒适", "轻", "轻便", "轻盈", "软", "柔软", "保暖", "透气", "耐穿", "百搭",
+    "好看", "显瘦", "显高", "稳", "支撑", "抓地", "防滑", "满意", "喜欢", "推荐", "回购",
+    "comfortable", "soft", "warm", "light", "breathable", "support", "good", "great", "love",
+]
+
+CONCERN_COMMENT_KEYWORDS = [
+    "担心", "怕", "会不会", "闷", "扎", "硌", "磨脚", "硬", "重", "厚", "薄", "滑", "累",
+    "压脚", "起球", "缩水", "色差", "偏大", "偏小", "显胖", "不够暖", "变形", "洗后", "耐穿",
+    "耐用", "稳不稳", "支撑够不够", "itch", "scratch",
+    "heavy", "hard", "slip", "tight", "loose", "expensive",
+]
+
+CONCERN_MARKERS = ["担心", "不知道", "会不会", "怕", "？", "?", "是否", "能不能"]
+
+SCENE_COMMENT_KEYWORDS = [
+    "通勤", "上班", "上学", "日常", "出街", "运动", "跑步", "健身", "户外", "露营", "爬山",
+    "开车", "打底", "内搭", "居家", "换季", "秋冬", "春秋", "school", "office", "commute",
+    "daily", "outdoor", "gym", "run", "layer", "home",
+]
 
 
 class ProductionService:
@@ -32,18 +54,15 @@ class ProductionService:
         if structured is None:
             structured = {}
 
-        # Case 1: No comments - generate from product info
-        if not comments:
+        if not comments or self._are_placeholder_comments(comments):
             comments = self.ai_service.generate_comments(product_name, product_info, structured)
             return comments[:10]
 
-        # Case 2: Has comments but less than 3 - supplement
         if len(comments) < 3:
             supplemental = self.ai_service.generate_comments(product_name, product_info, structured)
             comments = list(comments) + supplemental
             return comments[:10]
 
-        # Case 3: Already has 3+ comments - use as-is
         return comments[:5]
 
     def generate_script_from_comments(
@@ -61,9 +80,12 @@ class ProductionService:
         import logging
         logger = logging.getLogger(__name__)
 
+        if structured is None:
+            structured = {}
+
         if product_url:
             ai_info = self.ai_service.extract_product_info_from_url(product_url)
-            logger.info(f"URL提取信息: {ai_info}")
+            logger.info(f"URL extracted info: {ai_info}")
 
             if not product_name:
                 product_name = ai_info.get("product_name", "")
@@ -84,54 +106,157 @@ class ProductionService:
             structured=structured
         )
 
-        logger.info(f"最终商品名: {product_name}")
-        logger.info(f"最终卖点: {selling_points}")
-        logger.info(f"最终评论: {prepared_comments}")
-
-        # 从评论中提取 insights（简单的关键词提取作为洞察）
+        product_context = self._build_product_context(
+            product_name=product_name,
+            product_info=product_info,
+            selling_points=selling_points,
+            structured=structured,
+        )
+        comment_context = self._build_comment_context(prepared_comments)
         insights = self._extract_insights_from_comments(prepared_comments)
 
-        # 融合 structured 和 insights 生成话术
+        logger.info(f"Final product name: {product_name}")
+        logger.info(f"Final selling points: {selling_points}")
+        logger.info(f"Final comments: {prepared_comments}")
+        logger.info(f"Built product context keys: {list(product_context.keys())}")
+        logger.info(f"Built comment context keys: {list(comment_context.keys())}")
+
         return self.ai_service.generate_single_style_script(
             insights=insights,
-            structured=structured
+            structured=structured,
+            product_context=product_context,
+            comment_context=comment_context,
         )
 
-    def _extract_insights_from_comments(self, comments: List[str]) -> Dict[str, Any]:
-        """
-        从评论中提取简单洞察（关键词和情感）
-        这是一个轻量级的分析，不依赖额外 AI 调用
-        """
-        if not comments:
-            return {}
+    def _build_product_context(
+        self,
+        product_name: str = "",
+        product_info: str = "",
+        selling_points: str = "",
+        structured: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """Build normalized product facts for prompt assembly."""
+        if structured is None:
+            structured = {}
 
-        # 简单的关键词统计和情感倾向判断
-        pain_keywords = []
-        positive_keywords = []
-        negative_keywords = []
+        context = {
+            "product_name": structured.get("title") or structured.get("product_name") or product_name,
+            "product_type": structured.get("product_type", ""),
+            "material": structured.get("material", ""),
+            "features": self._normalize_list(structured.get("features")),
+            "function": structured.get("function") or structured.get("effect") or "",
+            "scene": structured.get("scene", ""),
+            "applicable": structured.get("applicable") or structured.get("target") or "",
+            "colors": structured.get("colors", ""),
+            "season": structured.get("season", ""),
+            "brief_summary": structured.get("brief_summary") or selling_points or "",
+            "detailed_summary": structured.get("detailed_summary") or product_info or "",
+            "selling_points": structured.get("selling_points") or selling_points or "",
+            "product_info": product_info or "",
+        }
 
-        pain_words = ['贵', '慢', '差', '不好', '失望', '坑', '后悔', '难', '不舒服', '小', '褪色', '起球']
-        positive_words = ['好', '不错', '喜欢', '满意', '推荐', '回购', '快', '漂亮', '舒服', '值', '赞']
-        negative_words = ['贵', '慢', '差', '失望', '后悔', '不值', '麻烦']
-
-        all_text = ' '.join(comments)
-
-        for word in pain_words:
-            if word in all_text:
-                pain_keywords.append(word)
-        for word in positive_words:
-            if word in all_text:
-                positive_keywords.append(word)
-        for word in negative_words:
-            if word in all_text:
-                negative_keywords.append(word)
+        for key in [
+            "thickness", "style", "ingredients", "shelf_life", "origin", "spec",
+            "model", "power", "battery", "compatible", "effect", "skin_type", "usage"
+        ]:
+            value = structured.get(key)
+            if value:
+                context[key] = value
 
         return {
-            "pain_points": list(set(pain_keywords))[:5],
-            "selling_points": list(set(positive_keywords))[:5],
-            "concerns": list(set(negative_keywords))[:3],
-            "use_cases": []
+            key: value for key, value in context.items()
+            if self._has_value(value)
         }
+
+    def _build_comment_context(self, comments: List[str]) -> Dict[str, Any]:
+        """Build normalized comment insights for prompt assembly."""
+        raw_comments = [comment.strip() for comment in comments or [] if comment and comment.strip()]
+        if not raw_comments:
+            return {}
+
+        concern_comments = [comment for comment in raw_comments if self._is_concern_comment(comment)]
+        highlights = self._match_comments_by_keywords(
+            [comment for comment in raw_comments if not self._is_concern_comment(comment)],
+            POSITIVE_COMMENT_KEYWORDS
+        )
+        concerns = self._match_comments_by_keywords(raw_comments, CONCERN_COMMENT_KEYWORDS)
+        scenes = self._match_comments_by_keywords(raw_comments, SCENE_COMMENT_KEYWORDS)
+
+        if not highlights:
+            highlights = [comment for comment in raw_comments if not self._is_concern_comment(comment)][:3]
+        if not concerns:
+            concerns = concern_comments[:3]
+        else:
+            concerns = self._dedupe_preserve_order(concerns + concern_comments)[:3]
+
+        return {
+            "highlights": highlights[:3],
+            "concerns": concerns[:3],
+            "scenes": scenes[:3],
+            "sample_quotes": raw_comments[:4],
+            "raw_comments": raw_comments[:10],
+        }
+
+    def _extract_insights_from_comments(self, comments: List[str]) -> Dict[str, Any]:
+        """Keep legacy insights available while using richer comment context."""
+        comment_context = self._build_comment_context(comments)
+        if not comment_context:
+            return {}
+
+        return {
+            "pain_points": comment_context.get("concerns", []),
+            "selling_points": comment_context.get("highlights", []),
+            "concerns": comment_context.get("concerns", []),
+            "use_cases": comment_context.get("scenes", []),
+            "sample_quotes": comment_context.get("sample_quotes", []),
+        }
+
+    def _match_comments_by_keywords(self, comments: List[str], keywords: List[str], limit: int = 3) -> List[str]:
+        matches = []
+        for comment in comments:
+            lowered = comment.lower()
+            if any(keyword.lower() in lowered for keyword in keywords):
+                matches.append(comment)
+            if len(matches) >= limit:
+                break
+        return self._dedupe_preserve_order(matches)[:limit]
+
+    def _normalize_list(self, value: Any) -> List[str]:
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if isinstance(value, str) and value.strip():
+            return [value.strip()]
+        return []
+
+    def _are_placeholder_comments(self, comments: List[str]) -> bool:
+        normalized = [comment.strip() for comment in comments if comment and comment.strip()]
+        if not normalized:
+            return False
+
+        placeholders = {"质量不错", "性价比高", "值得购买"}
+        return set(normalized).issubset(placeholders)
+
+    def _is_concern_comment(self, comment: str) -> bool:
+        lowered = comment.lower()
+        return any(marker.lower() in lowered for marker in CONCERN_MARKERS)
+
+    def _dedupe_preserve_order(self, values: List[str]) -> List[str]:
+        seen = set()
+        output = []
+        for value in values:
+            if value not in seen:
+                seen.add(value)
+                output.append(value)
+        return output
+
+    def _has_value(self, value: Any) -> bool:
+        if value is None:
+            return False
+        if isinstance(value, str):
+            return bool(value.strip())
+        if isinstance(value, list):
+            return any(self._has_value(item) for item in value)
+        return bool(value)
 
     def rewrite_script(self, script: Dict[str, Any], mode: str) -> Dict[str, Any]:
         """
