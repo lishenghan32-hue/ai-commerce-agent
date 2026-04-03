@@ -1,221 +1,171 @@
 """
 AI Prompts - All prompt building functions (pure functions)
 """
-from typing import Any, Dict, List
+from typing import List, Dict, Any
 
 
-def _append_line(parts: List[str], label: str, value: Any) -> None:
-    if value is None:
-        return
-    if isinstance(value, list):
-        normalized = [str(item).strip() for item in value if str(item).strip()]
-        if not normalized:
-            return
-        value = "、".join(normalized)
-    elif isinstance(value, str):
-        value = value.strip()
-        if not value:
-            return
-    parts.append(f"- {label}: {value}")
+def build_single_style_script_prompt(insights: Dict[str, Any], structured: Dict[str, Any] = None) -> str:
+    """Build prompt for single-style script generation (带货型)
 
-
-def _build_product_context_block(product_context: Dict[str, Any]) -> str:
-    parts: List[str] = []
-    labels = [
-        ("product_name", "商品名称"),
-        ("product_type", "商品类型"),
-        ("material", "材质/成分"),
-        ("features", "特点"),
-        ("function", "功能"),
-        ("scene", "使用场景"),
-        ("applicable", "适用人群"),
-        ("colors", "颜色"),
-        ("season", "季节"),
-        ("brief_summary", "核心卖点"),
-        ("detailed_summary", "详细描述"),
-        ("selling_points", "补充卖点"),
-        ("product_info", "商品描述"),
-        ("thickness", "厚度"),
-        ("style", "款式"),
-        ("ingredients", "配料/成分"),
-        ("shelf_life", "保质期"),
-        ("origin", "产地"),
-        ("spec", "规格"),
-        ("model", "型号"),
-        ("power", "功率"),
-        ("battery", "续航"),
-        ("compatible", "兼容系统"),
-        ("effect", "功效"),
-        ("skin_type", "适用肤质"),
-        ("usage", "使用方式"),
-    ]
-    for key, label in labels:
-        _append_line(parts, label, product_context.get(key))
-
-    if not parts:
-        parts.append("- 无")
-
-    return "【商品事实】\n" + "\n".join(parts) + "\n\n"
-
-
-def _build_comment_context_block(comment_context: Dict[str, Any]) -> str:
-    parts: List[str] = []
-    for key, label in [
-        ("highlights", "高频认可"),
-        ("concerns", "高频顾虑"),
-        ("scenes", "高频场景"),
-        ("sample_quotes", "典型原话"),
-    ]:
-        value = comment_context.get(key)
-        if isinstance(value, list):
-            normalized = [str(item).strip() for item in value if str(item).strip()]
-            if normalized:
-                parts.append(f"- {label}: {'；'.join(normalized)}")
-        elif isinstance(value, str) and value.strip():
-            parts.append(f"- {label}: {value.strip()}")
-
-    if not parts:
-        parts.append("- 无")
-
-    return "【用户反馈】\n" + "\n".join(parts) + "\n\n"
-
-
-def _legacy_product_context(structured: Dict[str, Any]) -> Dict[str, Any]:
+    Args:
+        insights: User insights from comment analysis
+        structured: Structured product data
+    """
     if structured is None:
         structured = {}
 
-    return {
-        "product_name": structured.get("title") or structured.get("product_name", ""),
-        "product_type": structured.get("product_type", ""),
-        "material": structured.get("material", ""),
-        "features": structured.get("features", []),
-        "function": structured.get("function") or structured.get("effect") or "",
-        "scene": structured.get("scene", ""),
-        "applicable": structured.get("applicable") or structured.get("target") or "",
-        "colors": structured.get("colors", ""),
-        "season": structured.get("season", ""),
-        "brief_summary": structured.get("brief_summary") or structured.get("selling_points", ""),
-        "detailed_summary": structured.get("detailed_summary") or structured.get("advantage", ""),
-        "selling_points": structured.get("selling_points", ""),
-        "thickness": structured.get("thickness", ""),
-        "style": structured.get("style", ""),
-        "ingredients": structured.get("ingredients", ""),
-        "shelf_life": structured.get("shelf_life", ""),
-        "origin": structured.get("origin", ""),
-        "spec": structured.get("spec", ""),
-        "model": structured.get("model", ""),
-        "power": structured.get("power", ""),
-        "battery": structured.get("battery", ""),
-        "compatible": structured.get("compatible", ""),
-        "effect": structured.get("effect", ""),
-        "skin_type": structured.get("skin_type", ""),
-        "usage": structured.get("usage", ""),
-    }
+    # 构建商品结构化信息
+    struct_info = ""
+    if structured:
+        struct_parts = []
+        # 商品基本信息
+        if structured.get("title"):
+            struct_parts.append(f"商品名称: {structured['title']}")
+        if structured.get("product_type"):
+            struct_parts.append(f"商品类型: {structured['product_type']}")
+        # 材质相关信息
+        if structured.get("material"):
+            struct_parts.append(f"材质: {structured['material']}")
+        if structured.get("ingredients"):
+            struct_parts.append(f"成分/配料: {structured['ingredients']}")
+        # 功能特性
+        if structured.get("function"):
+            struct_parts.append(f"功能: {structured['function']}")
+        if structured.get("effect"):
+            struct_parts.append(f"功效: {structured['effect']}")
+        if structured.get("features"):
+            features = structured.get("features")
+            if isinstance(features, list):
+                features = "、".join(features)
+            if features:
+                struct_parts.append(f"特点: {features}")
+        # 版型设计
+        if structured.get("style"):
+            struct_parts.append(f"款式: {structured['style']}")
+        if structured.get("thickness"):
+            struct_parts.append(f"厚度: {structured['thickness']}")
+        if structured.get("scene"):
+            struct_parts.append(f"使用场景: {structured['scene']}")
+        if structured.get("applicable"):
+            struct_parts.append(f"适用人群: {structured['applicable']}")
+        # 外观
+        if structured.get("colors"):
+            struct_parts.append(f"颜色: {structured['colors']}")
+        if structured.get("season"):
+            struct_parts.append(f"适用季节: {structured['season']}")
+        # 其他信息
+        if structured.get("brief_summary"):
+            struct_parts.append(f"核心卖点: {structured['brief_summary']}")
+        if structured.get("detailed_summary"):
+            # 只取前200字，避免过长
+            detail = structured['detailed_summary'][:200]
+            struct_parts.append(f"详细描述: {detail}")
+        # 商品特有字段
+        if structured.get("shelf_life"):
+            struct_parts.append(f"保质期: {structured['shelf_life']}")
+        if structured.get("origin"):
+            struct_parts.append(f"产地: {structured['origin']}")
+        if structured.get("spec"):
+            struct_parts.append(f"规格: {structured['spec']}")
+        if structured.get("model"):
+            struct_parts.append(f"型号: {structured['model']}")
+        if structured.get("power"):
+            struct_parts.append(f"功率: {structured['power']}")
+        if structured.get("battery"):
+            struct_parts.append(f"续航: {structured['battery']}")
+        if structured.get("compatible"):
+            struct_parts.append(f"兼容系统: {structured['compatible']}")
+        if structured.get("skin_type"):
+            struct_parts.append(f"适用肤质: {structured['skin_type']}")
+        if structured.get("usage"):
+            struct_parts.append(f"使用方法: {structured['usage']}")
+        if structured.get("selling_points"):
+            struct_parts.append(f"卖点: {structured['selling_points']}")
 
+        if struct_parts:
+            struct_info = "【商品详细信息】\n" + "\n".join(f"- {p}" for p in struct_parts) + "\n\n"
 
-def _legacy_comment_context(insights: Dict[str, Any]) -> Dict[str, Any]:
-    if insights is None:
-        insights = {}
+    # 合并 insights 中的关键词作为补充
+    insights_content = ""
+    if insights:
+        extra_parts = []
+        if insights.get("selling_points"):
+            extra_parts.append(f"用户认可的卖点: {insights['selling_points']}")
+        if insights.get("pain_points"):
+            extra_parts.append(f"用户关心的点: {insights['pain_points']}")
+        if extra_parts:
+            insights_content = "【用户反馈参考】\n" + "\n".join(f"- {p}" for p in extra_parts) + "\n\n"
 
-    return {
-        "highlights": insights.get("selling_points", []),
-        "concerns": insights.get("concerns", []) or insights.get("pain_points", []),
-        "scenes": insights.get("use_cases", []),
-        "sample_quotes": insights.get("sample_quotes", []),
-    }
+    base_content = f"{struct_info}{insights_content}"
 
+    # 禁止编造规则
+    constraints = """【禁止编造信息（必须严格执行）】
+1. 只能使用商品详情页或结构化数据中明确有的信息
+2. 严禁编造：售后政策、价格优惠、销量数据、品牌背书
+3. 不能说"第一"、"最"等绝对化表述
+4. 如果信息中没有材质成分，不能编造
+5. 如果信息中没有具体功能，不能编造
 
-def build_single_style_script_prompt(
-    product_context: Dict[str, Any] = None,
-    comment_context: Dict[str, Any] = None,
-    insights: Dict[str, Any] = None,
-    structured: Dict[str, Any] = None,
-) -> str:
-    """Build prompt for single-style script generation."""
-    if product_context is None:
-        product_context = {}
-    if comment_context is None:
-        comment_context = {}
-    if insights is None:
-        insights = {}
-    if structured is None:
-        structured = {}
+【话术风格要求】
+✅ 开头直接介绍产品，不是问问题
+✅ 像产品说明书一样专业讲解，不是情感共鸣
+✅ 用具体材质、工艺、技术术语，不是模糊形容
+✅ 有展示感（"大家看"、"先看看"），不是自说自话
+❌ 禁止问问题式开头（"你有没有觉得..."）
+❌ 禁止罗列卖点式介绍
+❌ 禁止编造数据或功能
 
-    if not product_context:
-        product_context = _legacy_product_context(structured)
-    if not comment_context:
-        comment_context = _legacy_comment_context(insights)
+"""
 
-    product_block = _build_product_context_block(product_context)
-    comment_block = _build_comment_context_block(comment_context)
+    prompt = f"""你是一名专业的抖音直播带货主播，擅长产品讲解和卖点输出。
+你的任务是：根据商品详细信息，生成专业的直播带货话术。
 
-    constraints = """【写作规则】
-1. 【商品事实】是唯一的事实来源，所有确定性表达都必须来自商品事实。
-2. 【用户反馈】只能帮助判断讲述重点、顾虑回应和场景优先级，不能当成新增事实来源。
-3. 禁止编造价格、折扣、赠品、库存数量、销量、售后政策、品牌背书、权威结论、医疗功效。
-4. 如果没有尺码、库存、颜色等信息，不要主动编造相关提醒。
-5. 语言要像品牌直播间主播边展示边讲款，不是说明书，也不是硬广标语，更不能写成商品简介。
-6. 每一段尽量按照“事实 -> 好处 -> 场景/体验”展开，避免只罗列参数。
-7. 少说“高级感满满”“质感在线”“闭眼入”这类空词，必须用具体细节支撑。
-8. 促单段要自然收口，可以强调实用性、适配场景、值得入手，但不要编造优惠和紧迫库存。
-9. 至少在 4 个段落里自然回应用户顾虑，例如闷不闷、扎不扎、磨不磨脚、会不会厚重、耐不耐穿、适不适合长时间站立、够不够暖、好不好打理等，但要像主播顺带解释，不要写成客服问答。
-10. 整体要有直播间循环讲款的节奏：每段先一句总领，再展开 2-4 句，段与段之间要有自然衔接，不能像六条独立简介。
+{base_content}
 
-【品类适配】
-1. 如果商品属于休闲鞋、运动鞋、护士鞋等鞋类，重点讲设计语言、鞋型轮廓、鞋面与鞋底材质、脚感、做工细节、抓地缓震、久站久走体验和搭配场景。
-2. 如果商品属于冲锋衣、滑雪服、羽绒服等功能型外套，重点讲防风、防水、透气、保暖、分层穿搭、活动灵活度、天气场景和细节工艺。
-3. 如果商品属于儿童保暖、儿童贴身衣物等贴身类目，重点讲面料、贴肤感、安全等级、工艺细节、换季/日常场景，以及家长最在意的舒适和安心感。
-4. 如果商品属于普通服装/内衣/打底/外套类，重点讲版型、面料、贴肤感、保暖/透气、工艺细节、季节温度和穿搭层次。"""
+{constraints}
 
-    prompt = f"""你是一名服务于鞋服类零售商家的资深直播讲款口播策划。
-你的任务是：根据商品事实和用户反馈，生成一套适合直播间 5-7 分钟循环讲解的完整讲款话术。
-
-{product_block}{comment_block}{constraints}
-
-【输出要求】
-1. opening：先把商品身份、核心价值、适合人群或大场景讲清楚，开头直接进入商品本身，不要寒暄。
-2. design：讲外观/版型/设计逻辑，让用户快速理解这件商品的风格与定位；如果是功能型商品，也要讲“为什么这么设计”。
-3. material：讲材质、成分、工艺和带来的体感或脚感，要把参数翻译成真实体验，不能只报成分表。
-4. details：讲最能体现品质和差异化的细节，并自然回应用户高频顾虑；这一段要有明显展示感。
-5. pairing：讲穿搭、颜色、温度、通勤/上学/居家/出街/户外等场景，让用户有代入感；如果是功能型产品，可以把这一段写成“场景适配”。
-6. offer：自然收口，强调实用性、使用频率和适配场景，不要突然跳成硬广；可以提醒用户按自己的需求尽快选款，但不能编优惠和库存。
-7. 每一段 160-220 字，整体总字数控制在 1000-1300 字，更像一套可循环讲的直播口播，而不是简介。
-8. 至少有 4 个段落要能看出你吸收了用户反馈中的关注点，尤其是顾虑类反馈。
-9. 多使用“大家看这里”“你们看这个位置”“这种细节其实一上手就能感觉到”“很多人会担心……但这件商品在这点上……”这类直播讲款表达。
-10. 语气要自然、可信、细节丰富，像专业主播在讲款，不要写成模板化参数介绍。
-
-请返回 JSON 格式：
+请返回JSON格式:
 {{
-    "opening": "",
-    "design": "",
-    "material": "",
-    "details": "",
-    "pairing": "",
-    "offer": ""
+    "opening": "开头引入，直接介绍产品（不是问问题）",
+    "material": "材质/面料介绍，具体材质名称和工艺特点",
+    "design": "版型/设计介绍，款式特点和适用场景",
+    "details": "细节介绍，做工、品质、对比等",
+    "pairing": "搭配建议，适用场景和颜色选择",
+    "offer": "促单话术，库存、尺码、优惠等"
 }}
 
-只返回 JSON，不要有其他内容。"""
+【输出要求】
+1. opening：直接介绍产品本身或设计灵感，比如"今天给大家带来的是..."、"各位老板有没有..."，要详细展开产品特点和使用场景，多用口语化表达
+2. material：具体材质名称，如"牛剖层皮革"、"EVA+橡胶双底"、"吸湿速干面料"等，需要详细描述材质特性、工艺优点和穿着体验，多用大白话解释
+3. design：专业版型说明+适用场景，详细介绍剪裁设计、风格特点和适合的穿搭场合，用通俗易懂的语言描述
+4. details：对比说明+展示感话术，如"大家看一下这个走线..."、"真的，我跟你讲..."，要详细描述细节做工、品质对比和独特设计，多用口语化表达
+5. pairing：场景适用+颜色搭配建议，结合商品特性给出具体的搭配方案、场合推荐和风格建议，用朋友聊天的语气
+6. offer：库存有限、尺码提醒、断码风险等自然促单，要有紧迫感并给出具体的优惠或限时信息，多用"家人们"、"最后"、"抓紧"等口语
+
+每一部分200-300字，要充分展开，多用具体描述和数据支撑。口语化表达占比60%以上，像真的主播在直播间跟观众聊天一样。
+只返回JSON，不要有其他内容。"""
 
     return prompt
 
 
 def build_rewrite_prompt(script: Dict[str, Any], mode: str) -> str:
-    """Build prompt for script rewriting based on mode."""
+    """Build prompt for script rewriting based on mode"""
+
     base_script = f"""当前话术：
 - 开头: {script.get('opening', '')}
 - 材质: {script.get('material', '')}
-- 设计: {script.get('design', '')}
+- 版型: {script.get('design', '')}
 - 细节: {script.get('details', '')}
 - 搭配: {script.get('pairing', '')}
 - 促单: {script.get('offer', '')}"""
 
     if mode == "强化转化":
-        prompt = f"""你是一名抖音直播带货主播，擅长优化话术提升转化率。
-你的任务是：将现有话术改写得更有行动感和购买推动力，但不能编造价格、库存和优惠。
+        prompt = f"""你是一名抖音/直播带货主播，擅长优化话术提升转化率。
+你的任务是：将现有话术进行"强化转化"改写，让它更具销售力。
 
 {base_script}
 
-请返回 JSON 格式：
+请返回JSON格式:
 {{
     "opening_hook": "",
     "pain_point": "",
@@ -224,13 +174,27 @@ def build_rewrite_prompt(script: Dict[str, Any], mode: str) -> str:
     "offer": ""
 }}
 
-只返回 JSON。"""
+【强化转化要求】：
+1. 增强情绪感染力，让用户更激动
+2. 加强催单感，增加紧迫感
+3. 使用倒计时、库存紧张、限时限量等手段
+4. 每一句都要有"必须马上买"的感觉
+5. 口语化，像主播在喊麦
+
+示例风格：
+"最后50单！抢完恢复原价！"
+"家人们，手慢无啊！"
+"今天这价格，只给到你们！"
+
+只返回JSON。"""
+
     elif mode == "更口语":
-        prompt = f"""你是一名抖音直播带货主播，擅长把话术改写得更自然、更像真人直播时说的话。
+        prompt = f"""你是一名抖音/直播带货主播，擅长用自然口语风格说话。
+你的任务是：将现有话术改写得更自然、更像真人说话。
 
 {base_script}
 
-请返回 JSON 格式：
+请返回JSON格式:
 {{
     "opening_hook": "",
     "pain_point": "",
@@ -239,13 +203,27 @@ def build_rewrite_prompt(script: Dict[str, Any], mode: str) -> str:
     "offer": ""
 }}
 
-只返回 JSON。"""
+【更口语要求】：
+1. 像朋友聊天一样自然
+2. 减少书面语词汇
+3. 增加语气词和感叹
+4. 让用户感觉在跟真人对话
+5. 减少生硬的推销感
+
+示例风格：
+"我跟你说啊..."
+"真的，我跟你讲..."
+"你试试就知道了..."
+
+只返回JSON。"""
+
     elif mode == "更理性":
-        prompt = f"""你是一名抖音直播带货主播，擅长用更清晰的逻辑说服用户。
+        prompt = f"""你一名抖音/直播带货主播，擅长用理性分析说服用户。
+你的任务是：将现有话术改写得更有逻辑、更有说服力。
 
 {base_script}
 
-请返回 JSON 格式：
+请返回JSON格式:
 {{
     "opening_hook": "",
     "pain_point": "",
@@ -254,13 +232,27 @@ def build_rewrite_prompt(script: Dict[str, Any], mode: str) -> str:
     "offer": ""
 }}
 
-只返回 JSON。"""
-    else:
-        prompt = f"""你是一名抖音直播带货主播，擅长把话术精简成最核心、最有力的表达。
+【更理性要求】：
+1. 增加数据支撑和证据
+2. 增加对比分析
+3. 讲原理、讲逻辑
+4. 消除用户理性顾虑
+5. 让人"想清楚"后下单
+
+示例风格：
+"我帮你算一笔账..."
+"从科学角度来说..."
+"根据数据显示..."
+
+只返回JSON。"""
+
+    else:  # 更简短
+        prompt = f"""你是一名抖音/直播带货主播，擅长用简洁有力的话术。
+你的任务是：将现有话术精简为最核心的内容。
 
 {base_script}
 
-请返回 JSON 格式：
+请返回JSON格式:
 {{
     "opening_hook": "",
     "pain_point": "",
@@ -269,20 +261,32 @@ def build_rewrite_prompt(script: Dict[str, Any], mode: str) -> str:
     "offer": ""
 }}
 
-只返回 JSON。"""
+【更简短要求】：
+1. 每一句控制在10个字以内
+2. 删除冗余描述
+3. 保留最核心卖点
+4. 保持口语化
+5. 去掉废话，直击重点
+
+示例风格：
+"效果好"
+"便宜"
+"快抢"
+
+只返回JSON。"""
 
     return prompt
 
 
 def build_ocr_summary_prompt(ocr_text: str) -> str:
-    """Build prompt for extracting OCR summary."""
-    prompt = f"""你是电商商品详情页分析专家。请从以下商品详情页 OCR 文字中提取结构化信息。
+    """Build prompt for extracting OCR summary"""
+    prompt = f"""你是电商商品详情页分析专家。请从以下商品详情页OCR文字中提取结构化信息。
 
 【重要规则】
-1. 只能提取 OCR 中明确出现的信息，禁止编造。
-2. 如果某个字段没有对应内容，返回空字符串或空数组。
-3. 根据商品类型补充对应的特有字段。
-4. detailed_summary 需要分段描述，用 \\n 分隔不同主题。
+1. 只提取OCR中明确有的信息，禁止编造
+2. 如果某个字段OCR中没有相关内容，返回空字符串
+3. 根据商品类型，填充对应类型的特有字段
+4. detailed_summary 必须分段表述，用\\n分隔不同主题内容
 
 【商品类型参考】
 - 服装/鞋帽：重点提取面料、厚度、款式、适用季节
@@ -291,7 +295,39 @@ def build_ocr_summary_prompt(ocr_text: str) -> str:
 - 美妆护肤：重点提取成分、功效、适用肤质
 - 家居用品：重点提取材质、尺寸、颜色
 
-【输出格式】
+【输出字段】
+通用字段（所有商品类型）：
+- material：材质成分
+- features：特点数组（不超过8个，每个不超过20字）
+- function：功能
+- scene：使用场景
+- applicable：适用人群
+- colors：颜色
+- season：适用季节
+
+服装特有：
+- thickness：厚度
+- style：款式
+
+食品特有：
+- ingredients：配料表
+- shelf_life：保质期
+- origin：产地
+- spec：规格
+
+电子产品特有：
+- model：型号
+- power：功率
+- battery：续航
+- compatible：兼容系统
+
+美妆特有：
+- ingredients：成分
+- effect：功效
+- skin_type：适用肤质
+- usage：使用方法
+
+输出格式：
 {{
   "product_type": "根据内容判断商品类型",
   "material": "",
@@ -301,8 +337,8 @@ def build_ocr_summary_prompt(ocr_text: str) -> str:
   "applicable": "",
   "colors": "",
   "season": "",
-  "brief_summary": "",
-  "detailed_summary": "",
+  "brief_summary": "30字以内的核心卖点",
+  "detailed_summary": "800-1200字详细描述，必须包含以下维度：①材质面料（具体成分含量）②工艺特点（制作工艺/技术）③穿着/使用体验（舒适度/口感/效果）④适用场景（场合/人群）⑤与其他产品的差异化优势。每一维度至少50字，分段表述用\\n分隔",
   "thickness": "",
   "style": "",
   "ingredients": "",
@@ -317,36 +353,65 @@ def build_ocr_summary_prompt(ocr_text: str) -> str:
   "skin_type": "",
   "usage": ""
 }}
+只返回JSON，不要解释。
 
-输入 OCR 文字：
+输入的OCR文字：
 {ocr_text}
 
-只返回 JSON。"""
+只返回JSON。"""
     return prompt
 
 
 def build_comment_generation_prompt(product_name: str, product_info: str = "", structured: dict = None) -> str:
-    """Build prompt for generating comments."""
+    """Build prompt for generating comments"""
     if structured is None:
         structured = {}
 
-    product_context = _build_product_context_block({
-        "product_name": product_name,
-        "product_info": product_info,
-        **structured,
-    })
+    # 构建商品信息上下文
+    info_parts = []
+    if product_name:
+        info_parts.append(f"商品名称: {product_name}")
+    if structured.get("product_type"):
+        info_parts.append(f"商品类型: {structured.get('product_type')}")
+    if structured.get("material"):
+        info_parts.append(f"材质/成分: {structured.get('material')}")
+    if structured.get("features"):
+        features = structured.get("features")
+        if isinstance(features, list):
+            features = "、".join(features)
+        info_parts.append(f"功能特点: {features}")
+    if structured.get("function"):
+        info_parts.append(f"功能: {structured.get('function')}")
+    if structured.get("scene"):
+        info_parts.append(f"使用场景: {structured.get('scene')}")
+    if structured.get("applicable"):
+        info_parts.append(f"适用人群: {structured.get('applicable')}")
+    if structured.get("brief_summary"):
+        info_parts.append(f"核心卖点: {structured.get('brief_summary')}")
+    if structured.get("detailed_summary"):
+        info_parts.append(f"详细描述: {structured.get('detailed_summary')}")
+    if product_info:
+        info_parts.append(f"商品描述: {product_info}")
 
-    prompt = f"""你是电商用户评论生成专家。根据以下商品信息，生成真实、口语化的用户评论。
+    # 其他特有字段
+    for key, label in [("thickness", "厚度"), ("style", "款式"), ("ingredients", "配料"),
+                        ("shelf_life", "保质期"), ("origin", "产地"), ("spec", "规格"),
+                        ("model", "型号"), ("power", "功率"), ("battery", "续航"),
+                        ("effect", "功效"), ("skin_type", "适用肤质"), ("usage", "使用方法")]:
+        if structured.get(key):
+            info_parts.append(f"{label}: {structured.get(key)}")
+
+    product_context = "\n".join(info_parts) if info_parts else "无"
+
+    prompt = f"""你是电商用户评论生成专家。根据以下商品信息，生成真实用户评论。
 
 {product_context}
-【生成要求】
-1. 一共生成 10 条评论。
-2. 其中 6 条是正向认可，4 条是下单前顾虑或犹豫点。
-3. 顾虑型评论要写成真实用户的担心或犹豫，不要写成恶意差评。
-4. 评论重点围绕材质、功能、舒适度、场景、搭配、做工等方面。
-5. 如果商品信息里没有价格、尺码、库存等内容，不要主动评论这些内容。
-6. 每条 15-28 字，口语化、自然，不要编号。
-7. 每条单独一行。
 
-只返回评论内容，不要有其他解释。"""
+要求：
+1. 生成10条评论，每条15-25字
+2. 口语化，像真实用户说话
+3. 包含正负评价（6:4比例）
+4. 评论要围绕商品的材质、功能、体验、价格等方面
+5. 每条一行，不要编号，直接返回评论内容"""
     return prompt
+
