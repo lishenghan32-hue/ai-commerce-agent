@@ -15,10 +15,11 @@ window.Utils = {
 
     formatScriptMarkdown: (script) => {
         const sections = [
-            ['opening_hook', '开头吸引'],
-            ['pain_point', '痛点描述'],
-            ['solution', '解决方案'],
-            ['proof', '证明案例'],
+            ['opening', '开头引入'],
+            ['material', '材质介绍'],
+            ['design', '版型设计'],
+            ['details', '细节展示'],
+            ['pairing', '搭配建议'],
             ['offer', '促单话术']
         ];
 
@@ -37,20 +38,22 @@ window.Utils = {
 
     getSectionLabel: (field) => {
         const labels = {
-            opening_hook: '开头吸引',
-            pain_point: '痛点描述',
-            solution: '解决方案',
-            proof: '证明案例',
+            opening: '开头引入',
+            material: '材质介绍',
+            design: '版型设计',
+            details: '细节展示',
+            pairing: '搭配建议',
             offer: '促单话术'
         };
         return labels[field] || field;
     },
 
     createEmptyScript: () => ({
-        opening_hook: [],
-        pain_point: [],
-        solution: [],
-        proof: [],
+        opening: [],
+        material: [],
+        design: [],
+        details: [],
+        pairing: [],
         offer: []
     })
 };

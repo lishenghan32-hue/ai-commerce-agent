@@ -14,8 +14,8 @@
     <div id="root"></div>
 
     <!-- Load utility functions (no JSX, no Babel needed) -->
-    <script src="/static/js/utils.js?v=20260331-2"></script>
-    <script src="/static/js/api.js?v=20260331-2"></script>
+    <script src="/static/js/utils.js?v=20260402-1"></script>
+    <script src="/static/js/api.js?v=20260402-1"></script>
 
     <script type="text/babel">
         // ===== React Components (use Utils and API from window) =====
@@ -23,10 +23,11 @@
         const { sleep, generateId, formatScriptData, getSectionLabel, createEmptyScript } = window.Utils;
         const formatScriptMarkdown = window.Utils.formatScriptMarkdown || ((script) => {
             const labels = {
-                opening_hook: '开头吸引',
-                pain_point: '痛点描述',
-                solution: '解决方案',
-                proof: '证明案例',
+                opening: '开头引入',
+                material: '材质介绍',
+                design: '版型设计',
+                details: '细节展示',
+                pairing: '搭配建议',
                 offer: '促单话术'
             };
             return Object.entries(labels)
@@ -627,10 +628,11 @@
 
         function ScriptsCard({ data }) {
             const sections = [
-                { key: 'opening_hook', label: '开头吸引', emoji: '🔥' },
-                { key: 'pain_point', label: '痛点描述', emoji: '😣' },
-                { key: 'solution', label: '解决方案', emoji: '✨' },
-                { key: 'proof', label: '证明案例', emoji: '📊' },
+                { key: 'opening', label: '开头引入', emoji: '🔥' },
+                { key: 'material', label: '材质介绍', emoji: '👕' },
+                { key: 'design', label: '版型设计', emoji: '✨' },
+                { key: 'details', label: '细节展示', emoji: '📋' },
+                { key: 'pairing', label: '搭配建议', emoji: '👔' },
                 { key: 'offer', label: '促单话术', emoji: '🎯' }
             ];
 
@@ -977,13 +979,48 @@
 
                 // 修复：检查对象是否有实际内容，而不是直接判断真值
                 // productData.structured 可能是空对象 {}，但在 JS 中是 truthy
+                console.log('[生成话术] === START ===');
+                console.log('[生成话术] productData:', JSON.stringify(productData));
+                console.log('[生成话术] structuredData state:', JSON.stringify(structuredData));
+                console.log('[生成话术] productData.structured:', JSON.stringify(productData.structured));
                 const hasProductStructured = productData.structured &&
                     Object.keys(productData.structured).some(k => productData.structured[k]);
                 const hasStructuredData = structuredData &&
                     Object.keys(structuredData).some(k => structuredData[k]);
 
-                const currentStructured = hasProductStructured ? productData.structured :
-                                          hasStructuredData ? structuredData : {};
+                console.log('[生成话术] hasProductStructured:', hasProductStructured);
+                console.log('[生成话术] hasStructuredData:', hasStructuredData);
+
+                // 声明 currentStructured 变量（作用域在函数级别）
+                let currentStructured;
+
+                // 如果两个都没有内容，打印更详细的调试信息
+                if (!hasProductStructured && !hasStructuredData) {
+                    console.log('[生成话术] 警告：structured 为空！');
+                    console.log('[生成话术] 完整 productData:', JSON.stringify(productData));
+                    console.log('[生成话术] 完整 structuredData:', JSON.stringify(structuredData));
+
+                    // 尝试从 productData 构建结构化数据
+                    console.log('[生成话术] 尝试从 productData 构建 structured 数据...');
+                    currentStructured = {
+                        title: productData.name || '',
+                        brief_summary: productData.selling_points || '',
+                        detailed_summary: productData.selling_points || '',
+                        selling_points: productData.selling_points || '',
+                        // 从 OCR 文本提取的字段
+                        material: '',
+                        features: [],
+                        function: '',
+                        scene: '',
+                        applicable: '',
+                        colors: '',
+                        season: ''
+                    };
+                    console.log('[生成话术] 从 productData 构建的 structured:', currentStructured);
+                } else {
+                    currentStructured = hasProductStructured ? productData.structured :
+                                              hasStructuredData ? structuredData : {};
+                }
 
                 console.log('[生成话术] currentStructured:', currentStructured);
                 console.log('[生成话术] productData:', productData);
@@ -1258,6 +1295,9 @@
                                         // ocr_summary_complete event - AI 提取结构化信息
                                         if (data.features !== undefined) {
                                             setSubStep('AI 提取结构化信息');
+                                            // 保存结构化数据供后续使用
+                                            setStructuredData(data);
+                                            console.log('[SSE] 完整流程中设置 structuredData:', data);
                                             // 更新 loading 为 AI 汇总完成消息
                                             updateLastMessage({
                                                 type: 'text',
@@ -1330,12 +1370,14 @@
                                             return;
                                         }
 
-                                        // structure_complete event
-                                        if (data.title !== undefined) {
+                                        // structure_complete event - 检查多个可能的字段
+                                        if (data.title !== undefined || data.product_name !== undefined || data.material !== undefined) {
                                             setSubStep('提取结构化信息...');
                                             setCurrentStep(3);
                                             setCompletedSteps(prev => [...new Set([...prev, 2, 3])]);
                                             setStructuredData(data);
+
+                                            console.log('[SSE] 设置 structuredData:', data);
 
                                             // 更新 loading 为完成消息
                                             updateLastMessage({

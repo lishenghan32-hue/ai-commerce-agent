@@ -9,10 +9,11 @@ from typing import Generator, Dict, List
 def _stream_script(script: Dict[str, str], chunk_size: int) -> Generator[str, None, None]:
     """Stream script sections in small chunks."""
     for field, label in [
-        ("opening_hook", "开头吸引"),
-        ("pain_point", "痛点描述"),
-        ("solution", "解决方案"),
-        ("proof", "证明案例"),
+        ("opening", "开头引入"),
+        ("material", "材质介绍"),
+        ("design", "版型设计"),
+        ("details", "细节展示"),
+        ("pairing", "搭配建议"),
         ("offer", "促单话术")
     ]:
         content = script.get(field, "")
@@ -72,15 +73,16 @@ def generate_sse_events(
         yield "event: progress\ndata: {\"step\": 2, \"status\": \"active\", \"message\": \"正在生成话术...\"}\n\n"
 
         # 确保 script 有内容再发送
-        has_content = any(script.get(field) for field in ["opening_hook", "pain_point", "solution", "proof", "offer"])
+        has_content = any(script.get(field) for field in ["opening", "material", "design", "details", "pairing", "offer"])
         if not has_content:
             logger.warning("生成的话术为空，使用默认内容")
             script = {
-                "opening_hook": "今天给大家介绍一款非常不错的产品",
-                "pain_point": "相信大家都有过类似的困扰",
-                "solution": "这款产品正好解决了这个问题",
-                "proof": "已经有很多朋友反馈效果很好",
-                "offer": "感兴趣的朋友可以了解一下"
+                "opening": "今天给大家带来的是这款精心挑选的商品",
+                "material": "采用高品质材质，质感出色，耐用舒适",
+                "design": "专业版型设计，适合多种场景穿着",
+                "details": "细节做工精细，品质有保障",
+                "pairing": "搭配简单，无论是日常还是工作都能轻松驾驭",
+                "offer": "库存有限，喜欢的朋友抓紧下单哦"
             }
 
         yield from _stream_script(script, chunk_size=10)
@@ -244,6 +246,8 @@ def generate_parse_ocr_stream_events(
             "skin_type": ocr_summary.get("skin_type", ""),
             "usage": ocr_summary.get("usage", "")
         }
+
+        logger.info(f"structured 数据: {structured}")
 
         structure_data = json.dumps(structured, ensure_ascii=False)
         yield f"event: structure_complete\ndata: {structure_data}\n\n"

@@ -152,10 +152,11 @@ class BaseAIService:
 
     def _default_script(self) -> Dict[str, Any]:
         return {
-            "opening_hook": "",
-            "pain_point": "",
-            "solution": "",
-            "proof": "",
+            "opening": "",
+            "material": "",
+            "design": "",
+            "details": "",
+            "pairing": "",
             "offer": ""
         }
 
