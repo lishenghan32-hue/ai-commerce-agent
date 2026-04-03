@@ -27,13 +27,14 @@ window.API = {
     },
 
     // Generate mock comments using AI
-    callGenerateCommentsAPI: async (productName, productInfo, options = {}) => {
+    callGenerateCommentsAPI: async (productName, productInfo, structured = null, options = {}) => {
         const response = await fetch('/api/generate-comments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 product_name: productName || '',
-                product_info: productInfo || ''
+                product_info: productInfo || '',
+                structured: structured
             }),
             signal: options.signal
         });

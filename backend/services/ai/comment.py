@@ -51,7 +51,7 @@ class AIServiceCommentMixin(BaseAIService):
             prompt = prompts.build_comment_generation_prompt(product_name, product_info)
             raw_response = self._call_api(prompt)
             comments = [c.strip() for c in raw_response.split('\n') if c.strip()]
-            return comments[:5]
+            return comments[:10]
         except Exception as e:
             logger.error(f"Failed to generate comments: {e}")
             return [
@@ -73,7 +73,7 @@ class AIServiceCommentMixin(BaseAIService):
             prompt = prompts.build_selling_points_to_comments_prompt(selling_points)
             raw_response = self._call_api(prompt)
             comments = [c.strip() for c in raw_response.split('\n') if c.strip()]
-            return comments[:5]
+            return comments[:10]
         except Exception as e:
             logger.error(f"Failed to convert selling points: {e}")
             return [

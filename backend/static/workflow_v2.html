@@ -1,20 +1,21 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Commerce - 工作流模式</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="/static/css/workflow_v2.css">
 </head>
 <body>
     <div id="root"></div>
 
     <!-- Load utility functions (no JSX, no Babel needed) -->
-    <script src="/static/js/utils.js?v=20260331-2"></script>
-    <script src="/static/js/api.js?v=20260331-2"></script>
+    <script src="/static/js/utils.js?v=20260402-1"></script>
+    <script src="/static/js/api.js?v=20260402-1"></script>
 
     <script type="text/babel">
         // ===== React Components (use Utils and API from window) =====
@@ -22,10 +23,11 @@
         const { sleep, generateId, formatScriptData, getSectionLabel, createEmptyScript } = window.Utils;
         const formatScriptMarkdown = window.Utils.formatScriptMarkdown || ((script) => {
             const labels = {
-                opening_hook: '开头吸引',
-                pain_point: '痛点描述',
-                solution: '解决方案',
-                proof: '证明案例',
+                opening: '开头引入',
+                material: '材质介绍',
+                design: '版型设计',
+                details: '细节展示',
+                pairing: '搭配建议',
                 offer: '促单话术'
             };
             return Object.entries(labels)
@@ -46,23 +48,15 @@
             return (
                 <div className="message-item-no-avatar">
                     <div className="line">
-                        <span className="loading-text">
-                            {text ? (
-                                <span>
-                                    {text.split('...')[0]}...
-                                    <span className="loading-dots-inline">
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                    </span>
-                                </span>
-                            ) : (
-                                <span className="loading-dots-inline">
-                                    <span className="loading-dot"></span>
-                                    <span className="loading-dot"></span>
-                                    <span className="loading-dot"></span>
-                                </span>
-                            )}
+                        <span className="loading-bubble">
+                            <span className="loading-label">
+                                {text ? text.split('...')[0] + '...' : 'Loading'}
+                            </span>
+                            <span className="loading-dots">
+                                <span className="loading-dot"></span>
+                                <span className="loading-dot"></span>
+                                <span className="loading-dot"></span>
+                            </span>
                         </span>
                     </div>
                 </div>
@@ -73,8 +67,13 @@
         function TextMessage({ status, children }) {
             return (
                 <div className="message-item">
-                    <span className="status-icon">{status}</span>
-                    <span className="message-text">{children}</span>
+                    <span className="status-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" fill="#111827"/>
+                            <circle cx="12" cy="12" r="4" fill="white"/>
+                        </svg>
+                    </span>
+                    <span className="message-text bold">{children}</span>
                 </div>
             );
         }
@@ -97,8 +96,7 @@
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">商品</span>
-                        <span className="card-title">解析结果</span>
+                        <h3>Product</h3>
                     </div>
                     <div className="product-grid">
                         <div className="product-item">
@@ -126,8 +124,7 @@
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">OCR</span>
-                        <span className="card-title">图片 {data.index}</span>
+                        <h3>OCR</h3>
                     </div>
                     <div className="ocr-text">
                         {data.status === 'loading' ? '识别中...' : data.text}
@@ -143,11 +140,8 @@
                 return (
                     <div className="card">
                         <div className="card-header">
-                            <span className="card-tag">OCR</span>
-                            <span className="card-title">AI 识别结果汇总</span>
-                            <span className="ai-badge">
-                                <span className="ai-icon">⚡</span> AI 分析
-                            </span>
+                            <h3>OCR Summary</h3>
+                            <span className="ai-badge">AI Assist</span>
                         </div>
                         <div className="ocr-summary">
                             {data.product_name && (
@@ -220,12 +214,107 @@
                                 </div>
                             )}
 
-                            {data.raw_summary && (
+                            {data.brief_summary && (
                                 <div className="ocr-summary-item">
-                                    <div className="ocr-summary-header">📋 详细汇总</div>
-                                    <div className="ocr-summary-text" style={{whiteSpace: 'pre-wrap'}}>
-                                        {data.raw_summary}
+                                    <div className="ocr-summary-header">📌 核心卖点</div>
+                                    <div className="ocr-summary-text" style={{fontWeight: 'bold', color: '#667eea'}}>
+                                        {data.brief_summary}
                                     </div>
+                                </div>
+                            )}
+
+                            {data.detailed_summary && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📋 详细描述</div>
+                                    <div className="ocr-summary-text" style={{whiteSpace: 'pre-wrap'}}>
+                                        {data.detailed_summary}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 服装特有字段 */}
+                            {data.thickness && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📏 厚度</div>
+                                    <div className="ocr-summary-text">{data.thickness}</div>
+                                </div>
+                            )}
+                            {data.style && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🎽 款式</div>
+                                    <div className="ocr-summary-text">{data.style}</div>
+                                </div>
+                            )}
+
+                            {/* 食品特有字段 */}
+                            {data.ingredients && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">配料表</div>
+                                    <div className="ocr-summary-text">{data.ingredients}</div>
+                                </div>
+                            )}
+                            {data.shelf_life && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📅 保质期</div>
+                                    <div className="ocr-summary-text">{data.shelf_life}</div>
+                                </div>
+                            )}
+                            {data.origin && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📍 产地</div>
+                                    <div className="ocr-summary-text">{data.origin}</div>
+                                </div>
+                            )}
+                            {data.spec && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📦 规格</div>
+                                    <div className="ocr-summary-text">{data.spec}</div>
+                                </div>
+                            )}
+
+                            {/* 电子产品特有字段 */}
+                            {data.model && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🔧 型号</div>
+                                    <div className="ocr-summary-text">{data.model}</div>
+                                </div>
+                            )}
+                            {data.power && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">⚡ 功率</div>
+                                    <div className="ocr-summary-text">{data.power}</div>
+                                </div>
+                            )}
+                            {data.battery && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">🔋 续航</div>
+                                    <div className="ocr-summary-text">{data.battery}</div>
+                                </div>
+                            )}
+                            {data.compatible && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📱 兼容系统</div>
+                                    <div className="ocr-summary-text">{data.compatible}</div>
+                                </div>
+                            )}
+
+                            {/* 美妆特有字段 */}
+                            {data.effect && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">✨ 功效</div>
+                                    <div className="ocr-summary-text">{data.effect}</div>
+                                </div>
+                            )}
+                            {data.skin_type && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">👩 适用肤质</div>
+                                    <div className="ocr-summary-text">{data.skin_type}</div>
+                                </div>
+                            )}
+                            {data.usage && (
+                                <div className="ocr-summary-item">
+                                    <div className="ocr-summary-header">📝 使用方法</div>
+                                    <div className="ocr-summary-text">{data.usage}</div>
                                 </div>
                             )}
                         </div>
@@ -236,8 +325,7 @@
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">OCR</span>
-                        <span className="card-title">识别结果汇总</span>
+                        <h3>OCR Summary</h3>
                     </div>
                     <div className="ocr-summary">
                         {data.items && data.items.map((item, idx) => (
@@ -264,26 +352,6 @@
 
             return (
                 <div className="comments-section">
-                    {!hasTriggered && (
-                        <button
-                            type="button"
-                            className="generate-comments-btn"
-                            onClick={onGenerate}
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? (
-                                <span className="loading-text">
-                                    AI 生成评论中
-                                    <span className="loading-dots-inline">
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                    </span>
-                                </span>
-                            ) : '触发用户评论生成'}
-                        </button>
-                    )}
-
                     {hasTriggered && hasComments && (
                         <div className="comments-toggle">
                             <button
@@ -298,50 +366,74 @@
                         </div>
                     )}
 
-                    {hasTriggered && (
-                        <button
-                            type="button"
-                            className={`generate-comments-btn${hasComments ? ' generate-comments-btn-secondary' : ''}`}
-                            onClick={onGenerate}
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? (
-                                <span className="loading-text">
-                                    AI 生成评论中
-                                    <span className="loading-dots-inline">
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                        <span className="loading-dot"></span>
-                                    </span>
-                                </span>
-                            ) : (hasComments ? '重新生成评论' : '生成评论')}
-                        </button>
-                    )}
-
                     {hasTriggered && hasComments && !isCollapsed && (
-                        <div className="comments-list">
+                        <div className="comments-grid">
                             {comments.map((comment, idx) => (
                                 <div key={idx} className="comment-item">
                                     <label>评论 {idx + 1}</label>
-                                    <textarea
+                                    <input
+                                        type="text"
                                         value={comment}
                                         onChange={(e) => onChange(idx, e.target.value)}
-                                        placeholder={`输入用户评论 ${idx + 1}...`}
-                                        rows={2}
+                                        placeholder={`评论 ${idx + 1}...`}
                                     />
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    <button
-                        type="button"
-                        className="btn-confirm btn-continue"
-                        onClick={onContinue}
-                        disabled={isGenerating}
-                    >
-                        {isGenerating ? '处理中...' : (hasTriggered && hasComments ? '▶ 继续生成话术' : '跳过评论，直接生成话术')}
-                    </button>
+                    <div className="comments-buttons">
+                        {hasTriggered && (
+                            <button
+                                type="button"
+                                className={`generate-comments-btn${hasComments ? ' generate-comments-btn-secondary' : ''}`}
+                                onClick={onGenerate}
+                                disabled={isGenerating}
+                            >
+                                {isGenerating ? (
+                                    <span className="loading-text">
+                                        AI 生成评论中
+                                        <span className="loading-dots-inline">
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                        </span>
+                                    </span>
+                                ) : (hasComments ? '重新生成评论' : '生成评论')}
+                            </button>
+                        )}
+
+                        {hasTriggered && (
+                            <button
+                                type="button"
+                                className="btn-confirm btn-continue"
+                                onClick={onContinue}
+                                disabled={isGenerating}
+                            >
+                                {isGenerating ? '处理中...' : (hasTriggered && hasComments ? '继续生成话术' : '跳过评论，直接生成话术')}
+                            </button>
+                        )}
+
+                        {!hasTriggered && (
+                            <button
+                                type="button"
+                                className="generate-comments-btn"
+                                onClick={onGenerate}
+                                disabled={isGenerating}
+                            >
+                                {isGenerating ? (
+                                    <span className="loading-text">
+                                        AI 生成评论中
+                                        <span className="loading-dots-inline">
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                        </span>
+                                    </span>
+                                ) : '触发用户评论生成'}
+                            </button>
+                        )}
+                    </div>
                 </div>
             );
         }
@@ -395,6 +487,7 @@
 
             const fieldLabels = {
                 title: '商品名称',
+                product_type: '商品类型',
                 material: '材质',
                 features: '特点',
                 function: '功能',
@@ -402,11 +495,25 @@
                 applicable: '适用',
                 colors: '颜色',
                 season: '季节',
-                raw_summary: '详细汇总'
+                brief_summary: '核心卖点',
+                detailed_summary: '详细描述',
+                thickness: '厚度',
+                style: '款式',
+                ingredients: '配料表',
+                shelf_life: '保质期',
+                origin: '产地',
+                spec: '规格',
+                model: '型号',
+                power: '功率',
+                battery: '续航',
+                compatible: '兼容系统',
+                effect: '功效',
+                skin_type: '适用肤质',
+                usage: '使用方法'
             };
 
-            // Split fields into two columns: left column (first 5) and right column (remaining)
-            const fieldEntries = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null);
+            // Split fields into two columns
+            const fieldEntries = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null && data[key] !== '');
             const half = Math.ceil(fieldEntries.length / 2);
             const leftFields = fieldEntries.slice(0, half);
             const rightFields = fieldEntries.slice(half);
@@ -414,18 +521,17 @@
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">结构化</span>
-                        <span className="card-title">商品信息提取</span>
-                        <span className="ai-badge">
-                            <span className="ai-icon">⚡</span> AI 推荐
-                        </span>
+                        <h3>Product Structure</h3>
+                        <span className="ai-badge">AI Assist</span>
                     </div>
 
                     {/* Two-column grid layout */}
                     <div className="structured-grid-two-col">
                         {/* Left column */}
                         <div className="structured-col">
-                            {leftFields.map(key => (
+                            {leftFields.map(key => {
+                                if (key === 'detailed_summary') return null;
+                                return (
                                 <div className="structured-field" key={key}>
                                     <label>
                                         {fieldLabels[key] || key}
@@ -439,28 +545,21 @@
                                             </button>
                                         )}
                                     </label>
-                                    {key === 'raw_summary' ? (
-                                        <textarea
-                                            value={data[key] || ''}
-                                            onChange={(e) => handleFieldChange(key, e.target.value)}
-                                            className={editedFields[key] ? 'edited' : ''}
-                                            rows={4}
-                                            placeholder="详细汇总..."
-                                        />
-                                    ) : (
-                                        <input
-                                            value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
-                                            onChange={(e) => handleFieldChange(key, e.target.value)}
-                                            className={editedFields[key] ? 'edited' : ''}
-                                        />
-                                    )}
+                                    <input
+                                        value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
+                                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                                        className={editedFields[key] ? 'edited' : ''}
+                                    />
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {/* Right column */}
                         <div className="structured-col">
-                            {rightFields.map(key => (
+                            {rightFields.map(key => {
+                                if (key === 'detailed_summary') return null;
+                                return (
                                 <div className="structured-field" key={key}>
                                     <label>
                                         {fieldLabels[key] || key}
@@ -474,25 +573,43 @@
                                             </button>
                                         )}
                                     </label>
-                                    {key === 'raw_summary' ? (
-                                        <textarea
-                                            value={data[key] || ''}
-                                            onChange={(e) => handleFieldChange(key, e.target.value)}
-                                            className={editedFields[key] ? 'edited' : ''}
-                                            rows={4}
-                                            placeholder="详细汇总..."
-                                        />
-                                    ) : (
-                                        <input
-                                            value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
-                                            onChange={(e) => handleFieldChange(key, e.target.value)}
-                                            className={editedFields[key] ? 'edited' : ''}
-                                        />
-                                    )}
+                                    <input
+                                        value={key === 'features' && Array.isArray(data[key]) ? data[key].join('、') : (data[key] || '')}
+                                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                                        className={editedFields[key] ? 'edited' : ''}
+                                    />
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
+
+                    {/* Detailed Summary - Full Width */}
+                    {data.detailed_summary && (
+                        <div className="raw-summary-container">
+                            <div className="structured-field">
+                                <label>
+                                    {fieldLabels['detailed_summary'] || '详细描述'}
+                                    {editedFields['detailed_summary'] && (
+                                        <button
+                                            className="reset-btn"
+                                            onClick={() => handleReset('detailed_summary')}
+                                            title="恢复AI推荐"
+                                        >
+                                            ↩
+                                        </button>
+                                    )}
+                                </label>
+                                <textarea
+                                    value={data.detailed_summary || ''}
+                                    onChange={(e) => handleFieldChange('detailed_summary', e.target.value)}
+                                    className={editedFields['detailed_summary'] ? 'edited' : ''}
+                                    rows={6}
+                                    placeholder="详细描述..."
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Comments section below the card */}
                     {showConfirm && (
@@ -511,35 +628,40 @@
 
         function ScriptsCard({ data }) {
             const sections = [
-                { key: 'opening_hook', label: '开头吸引' },
-                { key: 'pain_point', label: '痛点描述' },
-                { key: 'solution', label: '解决方案' },
-                { key: 'proof', label: '证明案例' },
-                { key: 'offer', label: '促单话术' }
+                { key: 'opening', label: '开头引入', emoji: '🔥' },
+                { key: 'material', label: '材质介绍', emoji: '👕' },
+                { key: 'design', label: '版型设计', emoji: '✨' },
+                { key: 'details', label: '细节展示', emoji: '📋' },
+                { key: 'pairing', label: '搭配建议', emoji: '👔' },
+                { key: 'offer', label: '促单话术', emoji: '🎯' }
             ];
 
             return (
                 <div className="card">
                     <div className="card-header">
-                        <span className="card-tag">话术</span>
-                        <span className="card-title">直播带货话术</span>
+                        <h3>Live Script</h3>
                     </div>
-                    {sections.map(section => (
+                    {sections.map(section => {
+                        const htmlContent = data[section.key] ? window.marked.parse(data[section.key]) : '';
+                        return (
                         <div className="script-section" key={section.key}>
-                            <div className="script-section-label">{section.label}</div>
-                            <div className="script-section-content">{data[section.key]}</div>
+                            <div className="script-section-label">
+                                <span className="section-emoji">{section.emoji}</span>
+                                {section.label}
+                            </div>
+                            <div className="script-section-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             );
         }
 
         function MarkdownMessage({ content }) {
+            const htmlContent = content ? window.marked.parse(content) : '';
             return (
                 <div className="message-item-no-avatar">
-                    <div className="markdown-message">
-                        <pre>{content}</pre>
-                    </div>
+                    <div className="markdown-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
                 </div>
             );
         }
@@ -552,6 +674,7 @@
             if (isUser && message.type === 'text') {
                 return (
                     <div className="message-wrapper user">
+                        <div className="message-avatar user">U</div>
                         <div className="message-content">
                             <div className="message-bubble">
                                 {message.content}
@@ -565,9 +688,30 @@
                 return <LoadingBubble text={message.text} />;
             }
 
-            // 无边框文字消息
+            // 无边框文字消息 (带状态图标)
             if (message.type === 'text') {
-                return <TextMessage status={message.status}>{message.content}</TextMessage>;
+                return (
+                    <div className="message-wrapper">
+                        <div className="message-content">
+                            <div className="message-bubble">
+                                {message.status && (
+                                    <span className="inline-status-icon">
+                                        {message.status === '✅' ? (
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                                <path d="M2.5 7L5.5 10.5L11.5 4.5" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                        ) : message.status === '⏹' ? (
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                                <rect x="3" y="3" width="8" height="8" rx="1" stroke="#111827" strokeWidth="2"/>
+                                            </svg>
+                                        ) : null}
+                                    </span>
+                                )}
+                                {message.content}
+                            </div>
+                        </div>
+                    </div>
+                );
             }
 
             // 多行消息（商品解析结果）
@@ -640,14 +784,19 @@
             const [completedSteps, setCompletedSteps] = useState([]);
             const [isGenerating, setIsGenerating] = useState(false);
             const [parseElapsedSeconds, setParseElapsedSeconds] = useState(0);
+            const [scriptElapsedSeconds, setScriptElapsedSeconds] = useState(0);
             const parsedProductRef = useRef(null);
             const abortControllerRef = useRef(null);
             const bottomRef = useRef(null);
 
-            // Auto-scroll to bottom
+            // Auto-scroll to bottom - only scroll after completion or when content changes significantly
             useEffect(() => {
+                // Don't auto-scroll during parsing (currentStep === 1 and not completed)
+                if (currentStep === 1 && !completedSteps.includes(1)) {
+                    return; // Wait for parsing to complete
+                }
                 bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-            }, [messages]);
+            }, [messages, currentStep, completedSteps]);
 
             // Parse timer - Step 1 only
             useEffect(() => {
@@ -664,7 +813,22 @@
                 return () => clearInterval(timer);
             }, [currentStep, completedSteps]);
 
-            // Update loading message with timer
+            // Script timer - Step 4 only (runs while generating, stops when complete)
+            useEffect(() => {
+                // Start timer when step 4 begins, stop when completed
+                if (currentStep !== 4 || completedSteps.includes(4)) {
+                    setScriptElapsedSeconds(0);
+                    return;
+                }
+
+                const timer = setInterval(() => {
+                    setScriptElapsedSeconds(prev => prev + 1);
+                }, 1000);
+
+                return () => clearInterval(timer);
+            }, [currentStep, completedSteps]);
+
+            // Update loading message with parse timer
             useEffect(() => {
                 if (currentStep !== 1 || completedSteps.includes(1)) {
                     return;
@@ -686,6 +850,29 @@
                     return next;
                 });
             }, [parseElapsedSeconds, currentStep, completedSteps]);
+
+            // Update loading message with script timer
+            useEffect(() => {
+                // Stop updating when script generation is complete
+                if (currentStep !== 4 || completedSteps.includes(4)) {
+                    return;
+                }
+
+                setMessages(prev => {
+                    const next = [...prev];
+                    const lastIndex = next.length - 1;
+                    const lastMessage = next[lastIndex];
+                    if (!lastMessage || lastMessage.type !== 'text' || lastMessage.content?.startsWith('正在生成话术...') === false) return prev;
+
+                    const nextContent = scriptElapsedSeconds > 0
+                        ? `正在生成话术...（${scriptElapsedSeconds}秒）`
+                        : '正在生成话术...';
+
+                    if (lastMessage.content === nextContent) return prev;
+                    next[lastIndex] = { ...lastMessage, content: nextContent };
+                    return next;
+                });
+            }, [scriptElapsedSeconds, currentStep, completedSteps]);
 
             // Add message
             const addMessage = (message) => {
@@ -709,6 +896,15 @@
             // Handle structured field change
             const handleStructuredChange = (key, value) => {
                 setStructuredData(prev => ({ ...prev, [key]: value }));
+                if (parsedProductRef.current) {
+                    parsedProductRef.current = {
+                        ...parsedProductRef.current,
+                        structured: {
+                            ...(parsedProductRef.current.structured || {}),
+                            [key]: value
+                        }
+                    };
+                }
                 setMessages(prev => {
                     const newMessages = [...prev];
                     const lastIdx = newMessages.length - 1;
@@ -725,21 +921,25 @@
             // Generate comments using AI
             const handleAppGenerateComments = async () => {
                 const productData = parsedProductRef.current || {};
-                const productName = productData.name || structuredData.title || '';
-                const productInfo = productData.selling_points || structuredData.raw_summary || '';
+                const currentStructured = (structuredData && Object.keys(structuredData).some(k => structuredData[k]))
+                    ? structuredData
+                    : (productData.structured || {});
+                const productName = productData.name || currentStructured.title || '';
+                const productInfo = productData.selling_points || currentStructured.detailed_summary || currentStructured.brief_summary || '';
 
                 setIsGenerating(true);
 
                 try {
                     const callGenerateCommentsAPI = window.API && window.API.callGenerateCommentsAPI
                         ? window.API.callGenerateCommentsAPI
-                        : async (name, info) => {
+                        : async (name, info, structured) => {
                             const response = await fetch('/api/generate-comments', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     product_name: name || '',
-                                    product_info: info || ''
+                                    product_info: info || '',
+                                    structured: structured || null
                                 })
                             });
                             if (!response.ok) {
@@ -755,7 +955,7 @@
                             return response.json();
                         };
 
-                    const result = await callGenerateCommentsAPI(productName, productInfo);
+                    const result = await callGenerateCommentsAPI(productName, productInfo, currentStructured);
                     return result.comments || [];
                 } catch (error) {
                     console.error('Generate comments error:', error);
@@ -776,6 +976,8 @@
                 setIsWaitingUser(false);
                 setCurrentStep(4);
                 setSubStep('正在生成话术...');
+                setScriptElapsedSeconds(0); // 重置计时器
+                setCompletedSteps(prev => prev.filter(step => step !== 4));
 
                 // 添加开始生成话术的消息
                 addMessage({
@@ -785,8 +987,56 @@
                     role: 'ai'
                 });
 
-                const currentStructured = structuredData;
                 const productData = parsedProductRef.current || {};
+
+                // 修复：检查对象是否有实际内容，而不是直接判断真值
+                // productData.structured 可能是空对象 {}，但在 JS 中是 truthy
+                console.log('[生成话术] === START ===');
+                console.log('[生成话术] productData:', JSON.stringify(productData));
+                console.log('[生成话术] structuredData state:', JSON.stringify(structuredData));
+                console.log('[生成话术] productData.structured:', JSON.stringify(productData.structured));
+                const hasProductStructured = productData.structured &&
+                    Object.keys(productData.structured).some(k => productData.structured[k]);
+                const hasStructuredData = structuredData &&
+                    Object.keys(structuredData).some(k => structuredData[k]);
+
+                console.log('[生成话术] hasProductStructured:', hasProductStructured);
+                console.log('[生成话术] hasStructuredData:', hasStructuredData);
+
+                // 声明 currentStructured 变量（作用域在函数级别）
+                let currentStructured;
+
+                // 如果两个都没有内容，打印更详细的调试信息
+                if (!hasProductStructured && !hasStructuredData) {
+                    console.log('[生成话术] 警告：structured 为空！');
+                    console.log('[生成话术] 完整 productData:', JSON.stringify(productData));
+                    console.log('[生成话术] 完整 structuredData:', JSON.stringify(structuredData));
+
+                    // 尝试从 productData 构建结构化数据
+                    console.log('[生成话术] 尝试从 productData 构建 structured 数据...');
+                    currentStructured = {
+                        title: productData.name || '',
+                        brief_summary: productData.selling_points || '',
+                        detailed_summary: productData.selling_points || '',
+                        selling_points: productData.selling_points || '',
+                        // 从 OCR 文本提取的字段
+                        material: '',
+                        features: [],
+                        function: '',
+                        scene: '',
+                        applicable: '',
+                        colors: '',
+                        season: ''
+                    };
+                    console.log('[生成话术] 从 productData 构建的 structured:', currentStructured);
+                } else {
+                    currentStructured = hasStructuredData ? structuredData :
+                                              hasProductStructured ? productData.structured : {};
+                }
+
+                console.log('[生成话术] currentStructured:', currentStructured);
+                console.log('[生成话术] productData:', productData);
+                console.log('[生成话术] comments:', comments);
 
                 try {
                     const query = new URLSearchParams({
@@ -798,6 +1048,8 @@
                         comments: JSON.stringify(comments || productData.comments || [])
                     });
 
+                    console.log('[生成话术] API URL:', `/api/generate-scripts-sse?${query}`);
+
                     const response = await fetch(`/api/generate-scripts-sse?${query}`, { method: 'GET' });
 
                     if (!response.ok) throw new Error('话术生成失败');
@@ -807,17 +1059,21 @@
 
                     let script = createEmptyScript();
                     let currentField = '';
+                    let eventCount = 0;
 
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
 
                         const text = decoder.decode(value);
+                        console.log('[SSE原始数据]:', text);
                         const lines = text.split('\n');
 
                         for (const line of lines) {
                             if (line.startsWith('data: ')) {
                                 const dataStr = line.slice(6);
+                                eventCount++;
+                                console.log('[SSE事件' + eventCount + ']:', dataStr);
                                 try {
                                     const data = JSON.parse(dataStr);
 
@@ -826,6 +1082,7 @@
                                         currentField = data.field;
                                         script[currentField] = [];
                                         setSubStep(`正在生成${data.label}...`);
+                                        console.log('[SSE] 新section:', data.field);
                                     }
 
                                     // script_chunk event
@@ -835,6 +1092,7 @@
                                             script[data.field] = [];
                                         }
                                         script[data.field].push(data.content);
+                                        console.log('[SSE] chunk:', data.field, data.content);
 
                                         const markdown = formatScriptMarkdown(script);
                                         setSubStep(`正在生成${getSectionLabel(currentField)}...`);
@@ -850,6 +1108,7 @@
                                     if (data.completed !== undefined) {
                                         setSubStep('');
                                         setCompletedSteps(prev => [...prev, 4]);
+                                        console.log('[SSE] script_complete');
                                     }
 
                                 } catch (e) {
@@ -858,6 +1117,8 @@
                             }
                         }
                     }
+
+                    console.log('[生成话术] 最终script:', script);
 
                     if (Object.keys(script).length === 0) {
                         throw new Error('话术生成失败');
@@ -1027,6 +1288,7 @@
                                         // ocr_complete event - all images processed
                                         if (data.combined_text !== undefined) {
                                             setCompletedSteps(prev => [...new Set([...prev, 2])]);
+                                            setSubStep('图片识别完成');  // 更新顶部状态
                                             // 更新 OCR 开始的 loading 为完成消息
                                             updateLastMessage({
                                                 type: 'text',
@@ -1045,6 +1307,40 @@
                                         // ocr_summary_complete event - AI 提取结构化信息
                                         if (data.features !== undefined) {
                                             setSubStep('AI 提取结构化信息');
+                                            const normalizedStructured = {
+                                                title: data.product_name || '',
+                                                product_type: data.product_type || '',
+                                                material: data.material || '',
+                                                features: data.features || [],
+                                                function: data.function || '',
+                                                scene: data.scene || '',
+                                                applicable: data.applicable || '',
+                                                colors: data.colors || '',
+                                                season: data.season || '',
+                                                brief_summary: data.brief_summary || '',
+                                                detailed_summary: data.detailed_summary || '',
+                                                thickness: data.thickness || '',
+                                                style: data.style || '',
+                                                ingredients: data.ingredients || '',
+                                                shelf_life: data.shelf_life || '',
+                                                origin: data.origin || '',
+                                                spec: data.spec || '',
+                                                model: data.model || '',
+                                                power: data.power || '',
+                                                battery: data.battery || '',
+                                                compatible: data.compatible || '',
+                                                effect: data.effect || '',
+                                                skin_type: data.skin_type || '',
+                                                usage: data.usage || ''
+                                            };
+                                            setStructuredData(normalizedStructured);
+                                            if (parsedProductRef.current) {
+                                                parsedProductRef.current = {
+                                                    ...parsedProductRef.current,
+                                                    structured: normalizedStructured
+                                                };
+                                            }
+                                            console.log('[SSE] 完整流程中设置 structuredData:', normalizedStructured);
                                             // 更新 loading 为 AI 汇总完成消息
                                             updateLastMessage({
                                                 type: 'text',
@@ -1056,6 +1352,7 @@
                                             // 改为文字消息形式显示 OCR 汇总
                                             const lines = [];
                                             if (data.product_name) lines.push({ status: '商品名称：', text: data.product_name });
+                                            if (data.product_type) lines.push({ status: '商品类型：', text: data.product_type });
                                             if (data.material) lines.push({ status: '材质：', text: data.material });
                                             if (data.features && data.features.length > 0) {
                                                 lines.push({ status: '特点：', text: data.features.join('、') });
@@ -1065,7 +1362,8 @@
                                             if (data.applicable) lines.push({ status: '适用：', text: data.applicable });
                                             if (data.colors) lines.push({ status: '颜色：', text: data.colors });
                                             if (data.season) lines.push({ status: '季节：', text: data.season });
-                                            if (data.raw_summary) lines.push({ status: '详细汇总：', text: data.raw_summary });
+                                            if (data.brief_summary) lines.push({ status: '核心卖点：', text: data.brief_summary });
+                                            if (data.detailed_summary) lines.push({ status: '详细描述：', text: data.detailed_summary });
 
                                             if (lines.length > 0) {
                                                 addMessage({ type: 'lines', lines, role: 'ai' });
@@ -1075,17 +1373,7 @@
                                             addMessage({
                                                 type: 'card',
                                                 cardType: 'structured',
-                                                data: {
-                                                    title: data.product_name || '',
-                                                    material: data.material || '',
-                                                    features: data.features || [],
-                                                    function: data.function || '',
-                                                    scene: data.scene || '',
-                                                    applicable: data.applicable || '',
-                                                    colors: data.colors || '',
-                                                    season: data.season || '',
-                                                    raw_summary: data.raw_summary || ''
-                                                },
+                                                data: normalizedStructured,
                                                 role: 'ai',
                                                 onChange: handleStructuredChange,
                                                 onConfirm: handleScriptsContinue,
@@ -1100,12 +1388,20 @@
                                             return;
                                         }
 
-                                        // structure_complete event
-                                        if (data.title !== undefined) {
+                                        // structure_complete event - 检查多个可能的字段
+                                        if (data.title !== undefined || data.product_name !== undefined || data.material !== undefined) {
                                             setSubStep('提取结构化信息...');
                                             setCurrentStep(3);
                                             setCompletedSteps(prev => [...new Set([...prev, 2, 3])]);
                                             setStructuredData(data);
+                                            if (parsedProductRef.current) {
+                                                parsedProductRef.current = {
+                                                    ...parsedProductRef.current,
+                                                    structured: data
+                                                };
+                                            }
+
+                                            console.log('[SSE] 设置 structuredData:', data);
 
                                             // 更新 loading 为完成消息
                                             updateLastMessage({
@@ -1210,16 +1506,67 @@
                 <div>
                     {/* Header */}
                     <header className="header">
-                        <h1>AI Commerce Agent</h1>
+                        <div className="header-inner">
+                            <div className="brand">
+                                <div className="mark">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                                <div className="brand-copy">
+                                    <h1>AI Commerce Agent</h1>
+                                    <p>script generation</p>
+                                </div>
+                            </div>
+                            <div className="header-right">
+                                <div className="eyebrow">Workflow</div>
+                                <div className="workflow-status">
+                                    Script generation in progress
+                                </div>
+                            </div>
+                        </div>
+                        {currentStep > 0 && (
+                            <div className="header-inner progress">
+                                <div className="current-state-label">Current state
+                                    <span className="current-state">
+                                        {subStep || (currentStep === 1 ? 'Parsing product' :
+                                            currentStep === 2 ? 'Running OCR' :
+                                            currentStep === 3 ? 'Building structure' :
+                                            currentStep === 4 ? 'Generating script' : 'Waiting')}
+                                    </span>
+                                </div>
+                                <div className="progress-steps">
+                                    <span className={completedSteps.includes(1) ? 'progress-step done' : (currentStep === 1 ? 'progress-step active' : 'progress-step')}>
+                                        Parse
+                                    </span>
+                                    <span className="progress-connector"></span>
+                                    <span className={completedSteps.includes(2) ? 'progress-step done' : (currentStep === 2 ? 'progress-step active' : 'progress-step')}>
+                                        OCR
+                                    </span>
+                                    <span className="progress-connector"></span>
+                                    <span className={completedSteps.includes(3) ? 'progress-step done' : (currentStep === 3 ? 'progress-step active' : 'progress-step')}>
+                                        Structure
+                                    </span>
+                                    <span className="progress-connector"></span>
+                                    <span className={completedSteps.includes(4) ? 'progress-step done' : (currentStep === 4 ? 'progress-step active' : 'progress-step')}>
+                                        Script
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </header>
 
                     {/* Main Content */}
-                    <main className="main-container" style={{ paddingTop: currentStep > 0 ? '90px' : '80px' }}>
+                    <main className="main-container">
                         {messages.length === 0 ? (
                             <div className="initial-state">
-                                <div className="initial-icon">🔄</div>
+                                <div className="initial-icon">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
                                 <div className="initial-title">AI Live Broadcast Script Generation Agent</div>
-                                <div className="initial-hint">输入商品链接开始执行直播话术生成智能体</div>
+                                <div className="initial-hint">顶栏采用极简悬浮，进度区采用时间轴式，让流程感更轻更高级。</div>
                             </div>
                         ) : (
                             <div className="messages-container">
@@ -1239,20 +1586,29 @@
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="请输入商品链接（支持抖音、淘宝、京东等）"
+                                    placeholder="Paste a product link from Douyin, Taobao, JD..."
                                     onKeyPress={(e) => e.key === 'Enter' && runFlow()}
                                 />
+                                {isGenerating && (
+                                    <button
+                                        className="btn-stop"
+                                        onClick={() => {
+                                            if (abortControllerRef.current) {
+                                                abortControllerRef.current.abort();
+                                                addMessage({ type: 'text', status: '⏹️', content: '用户中止执行', role: 'ai' });
+                                            }
+                                        }}
+                                    >
+                                        Stop
+                                    </button>
+                                )}
                                 <button
                                     id="start-btn"
-                                    className={isGenerating ? "btn-stop" : "btn-start"}
-                                    onClick={isGenerating ? () => {
-                                        if (abortControllerRef.current) {
-                                            abortControllerRef.current.abort();
-                                            addMessage({ type: 'text', status: '⏹️', content: '用户中止执行', role: 'ai' });
-                                        }
-                                    } : runFlow}
+                                    className="btn-start"
+                                    onClick={runFlow}
+                                    disabled={!input.trim() || isGenerating}
                                 >
-                                    {isGenerating ? '终止运行' : '开始生成'}
+                                    {isGenerating ? 'Running...' : 'Start'}
                                 </button>
                             </div>
                         </div>

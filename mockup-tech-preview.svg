@@ -1,0 +1,94 @@
+﻿<svg width="1440" height="1800" viewBox="0 0 1440 1800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#EEF2F7"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="200%" height="200%">
+      <feDropShadow dx="0" dy="14" stdDeviation="20" flood-color="#0F172A" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <rect width="1440" height="1800" fill="url(#bg)"/>
+  <circle cx="1240" cy="140" r="220" fill="#DCEAFE" opacity="0.45"/>
+  <circle cx="180" cy="260" r="180" fill="#E2E8F0" opacity="0.7"/>
+
+  <rect x="64" y="40" width="1312" height="84" rx="24" fill="#FFFFFF" stroke="#E2E8F0" filter="url(#shadow)"/>
+  <text x="108" y="92" font-family="Segoe UI, Arial" font-size="28" font-weight="700" fill="#0F172A">AI Commerce Agent</text>
+  <text x="1188" y="92" font-family="Segoe UI, Arial" font-size="18" font-weight="600" fill="#64748B">Live Workflow</text>
+
+  <rect x="64" y="142" width="1312" height="84" rx="24" fill="#FFFFFF" stroke="#E2E8F0" filter="url(#shadow)"/>
+  <g font-family="Segoe UI, Arial" font-size="18" font-weight="600">
+    <rect x="120" y="172" width="148" height="28" rx="14" fill="#E0E7FF"/>
+    <text x="144" y="192" fill="#1E293B">01 Parse</text>
+    <rect x="308" y="172" width="148" height="28" rx="14" fill="#0F172A"/>
+    <text x="333" y="192" fill="#F8FAFC">02 OCR</text>
+    <rect x="496" y="172" width="176" height="28" rx="14" fill="#F8FAFC" stroke="#CBD5E1"/>
+    <text x="524" y="192" fill="#64748B">03 Structure</text>
+    <rect x="714" y="172" width="160" height="28" rx="14" fill="#F8FAFC" stroke="#CBD5E1"/>
+    <text x="747" y="192" fill="#64748B">04 Script</text>
+  </g>
+
+  <g transform="translate(620 310)">
+    <rect x="0" y="0" width="200" height="200" rx="44" fill="#FFFFFF" stroke="#E2E8F0" filter="url(#shadow)"/>
+    <rect x="56" y="92" width="20" height="54" rx="10" fill="#0F172A"/>
+    <rect x="90" y="70" width="20" height="76" rx="10" fill="#1D4ED8"/>
+    <rect x="124" y="104" width="20" height="42" rx="10" fill="#475569"/>
+  </g>
+  <text x="720" y="564" text-anchor="middle" font-family="Segoe UI, Arial" font-size="42" font-weight="700" fill="#0F172A">AI Live Broadcast Script Generation Agent</text>
+  <text x="720" y="604" text-anchor="middle" font-family="Segoe UI, Arial" font-size="22" font-weight="500" fill="#64748B">Turn product links into structured selling scripts.</text>
+
+  <rect x="220" y="668" width="1000" height="78" rx="22" fill="#FFFFFF" stroke="#CBD5E1" filter="url(#shadow)"/>
+  <text x="254" y="715" font-family="Segoe UI, Arial" font-size="22" fill="#94A3B8">Paste a product link from Douyin, Taobao, JD...</text>
+  <rect x="1080" y="680" width="122" height="54" rx="16" fill="#0F172A"/>
+  <text x="1141" y="714" text-anchor="middle" font-family="Segoe UI, Arial" font-size="22" font-weight="700" fill="#FFFFFF">Run</text>
+
+  <g transform="translate(170 830)">
+    <circle cx="22" cy="22" r="22" fill="#0F172A"/>
+    <text x="22" y="28" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#FFFFFF">AI</text>
+    <rect x="60" y="0" width="820" height="78" rx="20" fill="#FFFFFF" stroke="#E2E8F0" filter="url(#shadow)"/>
+    <text x="94" y="46" font-family="Segoe UI, Arial" font-size="24" fill="#0F172A">Parsing product...</text>
+  </g>
+
+  <g transform="translate(450 940)">
+    <rect x="520" y="0" width="80" height="44" rx="22" fill="#E2E8F0"/>
+    <text x="560" y="28" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#334155">YOU</text>
+    <rect x="0" y="58" width="600" height="82" rx="22" fill="#1E293B" filter="url(#shadow)"/>
+    <text x="36" y="107" font-family="Segoe UI, Arial" font-size="22" fill="#F8FAFC">https://v.douyin.com/xxxxx</text>
+  </g>
+
+  <g transform="translate(170 1088)" font-family="Segoe UI, Arial">
+    <circle cx="18" cy="18" r="7" fill="#0F172A"/>
+    <text x="42" y="24" font-size="22" fill="#0F172A">Product parsed</text>
+    <circle cx="18" cy="64" r="7" fill="#0F172A"/>
+    <text x="42" y="70" font-size="22" fill="#0F172A">OCR complete</text>
+    <circle cx="18" cy="110" r="7" fill="#0F172A"/>
+    <text x="42" y="116" font-size="22" fill="#0F172A">Structured summary ready</text>
+  </g>
+
+  <rect x="120" y="1238" width="1200" height="320" rx="28" fill="#FFFFFF" stroke="#E2E8F0" filter="url(#shadow)"/>
+  <text x="164" y="1290" font-family="Segoe UI, Arial" font-size="28" font-weight="700" fill="#0F172A">Product Structure</text>
+  <rect x="1130" y="1258" width="132" height="34" rx="17" fill="#EFF6FF"/>
+  <text x="1196" y="1281" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#1D4ED8">AI Assist</text>
+  <line x1="160" y1="1312" x2="1280" y2="1312" stroke="#E2E8F0"/>
+
+  <g font-family="Segoe UI, Arial" font-size="18" fill="#475569">
+    <text x="164" y="1360">Title</text>
+    <text x="164" y="1432">Material</text>
+    <text x="164" y="1504">Features</text>
+    <text x="724" y="1432">Function</text>
+    <text x="724" y="1504">Audience</text>
+  </g>
+  <g fill="#F8FAFC" stroke="#CBD5E1">
+    <rect x="164" y="1374" width="1098" height="44" rx="12"/>
+    <rect x="164" y="1446" width="500" height="44" rx="12"/>
+    <rect x="164" y="1518" width="500" height="44" rx="12"/>
+    <rect x="724" y="1446" width="538" height="44" rx="12"/>
+    <rect x="724" y="1518" width="538" height="44" rx="12"/>
+  </g>
+
+  <rect x="164" y="1660" width="220" height="54" rx="16" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="274" y="1694" text-anchor="middle" font-family="Segoe UI, Arial" font-size="20" font-weight="700" fill="#334155">Generate Comments</text>
+  <rect x="1030" y="1660" width="232" height="54" rx="16" fill="#0F172A"/>
+  <text x="1146" y="1694" text-anchor="middle" font-family="Segoe UI, Arial" font-size="20" font-weight="700" fill="#FFFFFF">Continue to Script</text>
+</svg>

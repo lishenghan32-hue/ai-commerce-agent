@@ -9,10 +9,11 @@ from typing import Generator, Dict, List
 def _stream_script(script: Dict[str, str], chunk_size: int) -> Generator[str, None, None]:
     """Stream script sections in small chunks."""
     for field, label in [
-        ("opening_hook", "开头吸引"),
-        ("pain_point", "痛点描述"),
-        ("solution", "解决方案"),
-        ("proof", "证明案例"),
+        ("opening", "开头引入"),
+        ("material", "材质介绍"),
+        ("design", "版型设计"),
+        ("details", "细节展示"),
+        ("pairing", "搭配建议"),
         ("offer", "促单话术")
     ]:
         content = script.get(field, "")
@@ -65,9 +66,24 @@ def generate_sse_events(
             structured=structured
         )
 
+        logger.info(f"SSE 生成的话术: {script}")
+
         yield "event: progress\ndata: {\"step\": 0, \"status\": \"completed\", \"message\": \"输入处理完成\"}\n\n"
         yield "event: progress\ndata: {\"step\": 1, \"status\": \"completed\", \"message\": \"评论分析完成\"}\n\n"
         yield "event: progress\ndata: {\"step\": 2, \"status\": \"active\", \"message\": \"正在生成话术...\"}\n\n"
+
+        # 确保 script 有内容再发送
+        has_content = any(script.get(field) for field in ["opening", "material", "design", "details", "pairing", "offer"])
+        if not has_content:
+            logger.warning("生成的话术为空，使用默认内容")
+            script = {
+                "opening": "今天给大家带来的是这款精心挑选的商品",
+                "material": "采用高品质材质，质感出色，耐用舒适",
+                "design": "专业版型设计，适合多种场景穿着",
+                "details": "细节做工精细，品质有保障",
+                "pairing": "搭配简单，无论是日常还是工作都能轻松驾驭",
+                "offer": "库存有限，喜欢的朋友抓紧下单哦"
+            }
 
         yield from _stream_script(script, chunk_size=10)
 
@@ -154,6 +170,7 @@ def generate_parse_ocr_stream_events(
                 logger.error(f"OCR summary extraction failed: {e}")
                 ocr_summary = {
                     "product_name": product_name,
+                    "product_type": "",
                     "material": "",
                     "features": [],
                     "function": "",
@@ -161,7 +178,21 @@ def generate_parse_ocr_stream_events(
                     "applicable": "",
                     "colors": "",
                     "season": "",
-                    "raw_summary": ""
+                    "brief_summary": "",
+                    "detailed_summary": "",
+                    "thickness": "",
+                    "style": "",
+                    "ingredients": "",
+                    "shelf_life": "",
+                    "origin": "",
+                    "spec": "",
+                    "model": "",
+                    "power": "",
+                    "battery": "",
+                    "compatible": "",
+                    "effect": "",
+                    "skin_type": "",
+                    "usage": ""
                 }
 
             ocr_summary_data = json.dumps(ocr_summary, ensure_ascii=False)
@@ -192,11 +223,31 @@ def generate_parse_ocr_stream_events(
             "features": ocr_summary.get("features", []),
             "function": ocr_summary.get("function", ""),
             "scene": ocr_summary.get("scene", ""),
+            "target": ocr_summary.get("applicable", ""),
+            "advantage": ocr_summary.get("detailed_summary", ""),
             "applicable": ocr_summary.get("applicable", ""),
             "colors": ocr_summary.get("colors", ""),
             "season": ocr_summary.get("season", ""),
-            "raw_summary": ocr_summary.get("raw_summary", "")
+            "brief_summary": ocr_summary.get("brief_summary", ""),
+            "detailed_summary": ocr_summary.get("detailed_summary", ""),
+            # 商品类型特有字段
+            "product_type": ocr_summary.get("product_type", ""),
+            "thickness": ocr_summary.get("thickness", ""),
+            "style": ocr_summary.get("style", ""),
+            "ingredients": ocr_summary.get("ingredients", ""),
+            "shelf_life": ocr_summary.get("shelf_life", ""),
+            "origin": ocr_summary.get("origin", ""),
+            "spec": ocr_summary.get("spec", ""),
+            "model": ocr_summary.get("model", ""),
+            "power": ocr_summary.get("power", ""),
+            "battery": ocr_summary.get("battery", ""),
+            "compatible": ocr_summary.get("compatible", ""),
+            "effect": ocr_summary.get("effect", ""),
+            "skin_type": ocr_summary.get("skin_type", ""),
+            "usage": ocr_summary.get("usage", "")
         }
+
+        logger.info(f"structured 数据: {structured}")
 
         structure_data = json.dumps(structured, ensure_ascii=False)
         yield f"event: structure_complete\ndata: {structure_data}\n\n"
