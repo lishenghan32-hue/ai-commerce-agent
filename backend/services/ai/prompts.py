@@ -199,60 +199,6 @@ def build_single_style_script_prompt(
     return prompt
 
 
-def build_script_expansion_prompt(
-    script: Dict[str, Any],
-    product_context: Dict[str, Any] = None,
-    comment_context: Dict[str, Any] = None,
-    reasons: List[str] = None,
-) -> str:
-    """Build prompt for expanding or repairing a weak script draft."""
-    if product_context is None:
-        product_context = {}
-    if comment_context is None:
-        comment_context = {}
-    if reasons is None:
-        reasons = []
-
-    product_block = _build_product_context_block(product_context)
-    comment_block = _build_comment_context_block(comment_context)
-    reason_lines = "\n".join(f"- {reason}" for reason in reasons) if reasons else "- 当前初稿还不够完整"
-    draft_block = f"""【当前初稿】
-- opening: {script.get("opening", "")}
-- design: {script.get("design", "")}
-- material: {script.get("material", "")}
-- details: {script.get("details", "")}
-- pairing: {script.get("pairing", "")}
-- offer: {script.get("offer", "")}
-"""
-
-    return f"""你是一名服务于鞋服类零售商家的资深直播讲款口播策划。
-你的任务是：在不编造商品事实的前提下，把当前初稿补写成更完整、更像直播讲款的 5-7 分钟循环口播。
-
-{product_block}{comment_block}{draft_block}
-【当前初稿存在的问题】
-{reason_lines}
-
-【补写要求】
-1. 只能使用【商品事实】中的确定性信息，不能编造价格、折扣、赠品、库存、销量、尺码建议、售后政策、权威背书和额外功能。
-2. 把当前初稿扩充成完整讲稿，每一段 160-220 字，整体总字数控制在 1000-1300 字。
-3. 至少 4 个段落要自然回应【用户反馈】里的顾虑，写法要像主播顺带解释，不要写成客服问答。
-4. 每一段都按“事实 -> 好处 -> 场景/体验”展开，多补展示感、体验转译、使用场景，不要重复空话。
-5. 如果商品事实里没有尺码、优惠、库存信息，绝对不要补写这些内容。
-6. 语气要像专业主播在镜头前边展示边讲款，内容要比当前初稿明显更丰富、更完整，而不是简单同义改写。
-
-请返回 JSON：
-{{
-    "opening": "",
-    "design": "",
-    "material": "",
-    "details": "",
-    "pairing": "",
-    "offer": ""
-}}
-
-只返回 JSON，不要有其他内容。"""
-
-
 def build_rewrite_prompt(script: Dict[str, Any], mode: str) -> str:
     """Build prompt for script rewriting based on mode."""
     base_script = f"""当前话术：

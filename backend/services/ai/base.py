@@ -21,7 +21,7 @@ class BaseAIService:
 
     # ==================== Core API Methods ====================
 
-    def _call_api(self, prompt: str, max_retries: int = 3, max_tokens: int = 2000) -> str:
+    def _call_api(self, prompt: str, max_retries: int = 3) -> str:
         """Call MiniMax API with retry logic"""
         payload = {
             "model": self.model,
@@ -43,7 +43,7 @@ class BaseAIService:
                 "sender_name": "助手"
             },
             "temperature": 0.3,
-            "max_tokens": max_tokens
+            "max_tokens": 2000
         }
 
         headers = {

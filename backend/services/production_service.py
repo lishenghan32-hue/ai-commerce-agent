@@ -47,25 +47,23 @@ class ProductionService:
         Strategy:
         - If no comments provided: generate from product info
         - If comments < 3: supplement with generated comments
-        - If comments >= 3: use as-is, but keep a representative mix
+        - If comments >= 3: use as-is, truncate to 5
         """
         if comments is None:
             comments = []
         if structured is None:
             structured = {}
 
-        comments = self._clean_comments(comments)
-
         if not comments or self._are_placeholder_comments(comments):
             comments = self.ai_service.generate_comments(product_name, product_info, structured)
-            return self._select_representative_comments(comments, limit=10)
+            return comments[:10]
 
         if len(comments) < 3:
             supplemental = self.ai_service.generate_comments(product_name, product_info, structured)
             comments = list(comments) + supplemental
-            return self._select_representative_comments(comments, limit=10)
+            return comments[:10]
 
-        return self._select_representative_comments(comments, limit=10)
+        return comments[:5]
 
     def generate_script_from_comments(
         self,
@@ -172,7 +170,7 @@ class ProductionService:
 
     def _build_comment_context(self, comments: List[str]) -> Dict[str, Any]:
         """Build normalized comment insights for prompt assembly."""
-        raw_comments = self._clean_comments(comments)
+        raw_comments = [comment.strip() for comment in comments or [] if comment and comment.strip()]
         if not raw_comments:
             return {}
 
@@ -230,28 +228,6 @@ class ProductionService:
             return [value.strip()]
         return []
 
-    def _clean_comments(self, comments: List[str]) -> List[str]:
-        cleaned = [comment.strip() for comment in comments or [] if comment and comment.strip()]
-        return self._dedupe_preserve_order(cleaned)
-
-    def _select_representative_comments(self, comments: List[str], limit: int = 10) -> List[str]:
-        cleaned = self._clean_comments(comments)
-        if len(cleaned) <= limit:
-            return cleaned
-
-        concern_comments = [comment for comment in cleaned if self._is_concern_comment(comment)]
-        scene_comments = self._match_comments_by_keywords(cleaned, SCENE_COMMENT_KEYWORDS, limit=limit)
-        highlight_comments = self._match_comments_by_keywords(
-            [comment for comment in cleaned if not self._is_concern_comment(comment)],
-            POSITIVE_COMMENT_KEYWORDS,
-            limit=limit,
-        )
-
-        must_keep = self._dedupe_preserve_order(
-            concern_comments[:4] + scene_comments[:3] + highlight_comments[:4]
-        )
-        return self._dedupe_preserve_order(must_keep + cleaned)[:limit]
-
     def _are_placeholder_comments(self, comments: List[str]) -> bool:
         normalized = [comment.strip() for comment in comments if comment and comment.strip()]
         if not normalized:
@@ -262,9 +238,7 @@ class ProductionService:
 
     def _is_concern_comment(self, comment: str) -> bool:
         lowered = comment.lower()
-        return any(marker.lower() in lowered for marker in CONCERN_MARKERS) or any(
-            keyword.lower() in lowered for keyword in CONCERN_COMMENT_KEYWORDS
-        )
+        return any(marker.lower() in lowered for marker in CONCERN_MARKERS)
 
     def _dedupe_preserve_order(self, values: List[str]) -> List[str]:
         seen = set()
