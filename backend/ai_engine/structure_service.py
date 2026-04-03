@@ -47,6 +47,7 @@ def extract_ocr_summary(ocr_texts: List[str], product_name: str = "") -> Dict[st
 
         return {
             "product_name": product_name,
+            "product_type": parsed.get("product_type", ""),
             "material": parsed.get("material", ""),
             "features": parsed.get("features", []),
             "function": parsed.get("function", ""),
@@ -54,12 +55,31 @@ def extract_ocr_summary(ocr_texts: List[str], product_name: str = "") -> Dict[st
             "applicable": parsed.get("applicable", ""),
             "colors": parsed.get("colors", ""),
             "season": parsed.get("season", ""),
-            "raw_summary": parsed.get("raw_summary", "")[:500] if parsed.get("raw_summary") else ""
+            "brief_summary": parsed.get("brief_summary", ""),
+            "detailed_summary": parsed.get("detailed_summary", "")[:1500] if parsed.get("detailed_summary") else "",
+            # 服装特有
+            "thickness": parsed.get("thickness", ""),
+            "style": parsed.get("style", ""),
+            # 食品特有
+            "ingredients": parsed.get("ingredients", ""),
+            "shelf_life": parsed.get("shelf_life", ""),
+            "origin": parsed.get("origin", ""),
+            "spec": parsed.get("spec", ""),
+            # 电子产品特有
+            "model": parsed.get("model", ""),
+            "power": parsed.get("power", ""),
+            "battery": parsed.get("battery", ""),
+            "compatible": parsed.get("compatible", ""),
+            # 美妆特有
+            "effect": parsed.get("effect", ""),
+            "skin_type": parsed.get("skin_type", ""),
+            "usage": parsed.get("usage", "")
         }
     except Exception as e:
         logger.error(f"Failed to extract OCR summary: {e}")
         return {
             "product_name": product_name,
+            "product_type": "",
             "material": "",
             "features": [],
             "function": "",
@@ -67,7 +87,25 @@ def extract_ocr_summary(ocr_texts: List[str], product_name: str = "") -> Dict[st
             "applicable": "",
             "colors": "",
             "season": "",
-            "raw_summary": ""
+            "brief_summary": "",
+            "detailed_summary": "",
+            # 服装特有
+            "thickness": "",
+            "style": "",
+            # 食品特有
+            "ingredients": "",
+            "shelf_life": "",
+            "origin": "",
+            "spec": "",
+            # 电子产品特有
+            "model": "",
+            "power": "",
+            "battery": "",
+            "compatible": "",
+            # 美妆特有
+            "effect": "",
+            "skin_type": "",
+            "usage": ""
         }
 
 

@@ -85,14 +85,25 @@ def build_single_style_script_prompt(insights: Dict[str, Any], structured: Dict[
         if struct_parts:
             struct_info = "【商品详细信息】\n" + "\n".join(f"- {p}" for p in struct_parts) + "\n\n"
 
-    # 合并 insights 中的关键词作为补充
+    # 合并 insights 中的关键词作为补充（转换为可读文本）
     insights_content = ""
     if insights:
         extra_parts = []
-        if insights.get("selling_points"):
+        # 转换列表为可读文本
+        if insights.get("selling_points") and isinstance(insights["selling_points"], list):
+            selling_text = "、".join(str(x) for x in insights["selling_points"] if x)
+            if selling_text:
+                extra_parts.append(f"用户认可的卖点: {selling_text}")
+        elif insights.get("selling_points"):
             extra_parts.append(f"用户认可的卖点: {insights['selling_points']}")
-        if insights.get("pain_points"):
+
+        if insights.get("pain_points") and isinstance(insights["pain_points"], list):
+            pain_text = "、".join(str(x) for x in insights["pain_points"] if x)
+            if pain_text:
+                extra_parts.append(f"用户关心的点: {pain_text}")
+        elif insights.get("pain_points"):
             extra_parts.append(f"用户关心的点: {insights['pain_points']}")
+
         if extra_parts:
             insights_content = "【用户反馈参考】\n" + "\n".join(f"- {p}" for p in extra_parts) + "\n\n"
 
@@ -100,19 +111,18 @@ def build_single_style_script_prompt(insights: Dict[str, Any], structured: Dict[
 
     # 禁止编造规则
     constraints = """【禁止编造信息（必须严格执行）】
-1. 只能使用商品详情页或结构化数据中明确有的信息
+1. 只能使用下方商品详细信息中明确有的信息，禁止编造
 2. 严禁编造：售后政策、价格优惠、销量数据、品牌背书
-3. 不能说"第一"、"最"等绝对化表述
-4. 如果信息中没有材质成分，不能编造
-5. 如果信息中没有具体功能，不能编造
+3. 不能说"第一"、"最"、"顶级"等绝对化表述
+4. 如果某项商品信息为空，该部分可简写或留空，严禁编造
 
 【话术风格要求】
-✅ 开头直接介绍产品，不是问问题
+✅ 开头直接介绍产品本身，不是问问题
 ✅ 像产品说明书一样专业讲解，不是情感共鸣
 ✅ 用具体材质、工艺、技术术语，不是模糊形容
 ✅ 有展示感（"大家看"、"先看看"），不是自说自话
-❌ 禁止问问题式开头（"你有没有觉得..."）
-❌ 禁止罗列卖点式介绍
+❌ 禁止问问题式开头（"你有没有觉得..."、"是不是..."
+❌ 禁止罗列卖点式介绍（"保暖、透气、舒适..."
 ❌ 禁止编造数据或功能
 
 """
@@ -120,8 +130,10 @@ def build_single_style_script_prompt(insights: Dict[str, Any], structured: Dict[
     prompt = f"""你是一名专业的抖音直播带货主播，擅长产品讲解和卖点输出。
 你的任务是：根据商品详细信息，生成专业的直播带货话术。
 
-{base_content}
+【商品详细信息】
+{struct_info if struct_info else "(无详细商品信息)"}
 
+{insights_content if insights_content else ""}
 {constraints}
 
 请返回JSON格式:
@@ -135,14 +147,14 @@ def build_single_style_script_prompt(insights: Dict[str, Any], structured: Dict[
 }}
 
 【输出要求】
-1. opening：直接介绍产品本身或设计灵感，比如"今天给大家带来的是..."、"各位老板有没有..."，要详细展开产品特点和使用场景，多用口语化表达
+1. opening：直接介绍产品本身或设计灵感，比如"今天给大家带来的是..."、"各位老板看过来..."，要详细展开产品特点和使用场景，多用口语化表达
 2. material：具体材质名称，如"牛剖层皮革"、"EVA+橡胶双底"、"吸湿速干面料"等，需要详细描述材质特性、工艺优点和穿着体验，多用大白话解释
 3. design：专业版型说明+适用场景，详细介绍剪裁设计、风格特点和适合的穿搭场合，用通俗易懂的语言描述
 4. details：对比说明+展示感话术，如"大家看一下这个走线..."、"真的，我跟你讲..."，要详细描述细节做工、品质对比和独特设计，多用口语化表达
 5. pairing：场景适用+颜色搭配建议，结合商品特性给出具体的搭配方案、场合推荐和风格建议，用朋友聊天的语气
 6. offer：库存有限、尺码提醒、断码风险等自然促单，要有紧迫感并给出具体的优惠或限时信息，多用"家人们"、"最后"、"抓紧"等口语
 
-每一部分200-300字，要充分展开，多用具体描述和数据支撑。口语化表达占比60%以上，像真的主播在直播间跟观众聊天一样。
+【重要】每个部分 100-150 字即可，总计约 600-900 字。不要过度展开，保持简洁有力。口语化表达占比60%以上，像真的主播在直播间跟观众聊天一样。
 只返回JSON，不要有其他内容。"""
 
     return prompt
