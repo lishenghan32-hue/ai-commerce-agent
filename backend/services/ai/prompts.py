@@ -58,7 +58,7 @@ def build_single_style_script_prompt(insights: Dict[str, Any], structured: Dict[
             struct_parts.append(f"核心卖点: {structured['brief_summary']}")
         if structured.get("detailed_summary"):
             # 只取前200字，避免过长
-            detail = structured['detailed_summary'][:200]
+            detail = structured['detailed_summary'][:300]
             struct_parts.append(f"详细描述: {detail}")
         # 商品特有字段
         if structured.get("shelf_life"):
@@ -85,77 +85,111 @@ def build_single_style_script_prompt(insights: Dict[str, Any], structured: Dict[
         if struct_parts:
             struct_info = "【商品详细信息】\n" + "\n".join(f"- {p}" for p in struct_parts) + "\n\n"
 
-    # 合并 insights 中的关键词作为补充（转换为可读文本）
-    insights_content = ""
+    # 构建用户评论内容
+    user_comments_text = ""
     if insights:
-        extra_parts = []
-        # 转换列表为可读文本
-        if insights.get("selling_points") and isinstance(insights["selling_points"], list):
-            selling_text = "、".join(str(x) for x in insights["selling_points"] if x)
-            if selling_text:
-                extra_parts.append(f"用户认可的卖点: {selling_text}")
-        elif insights.get("selling_points"):
-            extra_parts.append(f"用户认可的卖点: {insights['selling_points']}")
+        original_comments = insights.get("original_comments", [])
+        if original_comments and isinstance(original_comments, list):
+            sample_comments = original_comments[:10]
+            # 用逗号分隔，不加引号
+            user_comments_text = "、".join(str(c) for c in sample_comments if c)
 
-        if insights.get("pain_points") and isinstance(insights["pain_points"], list):
-            pain_text = "、".join(str(x) for x in insights["pain_points"] if x)
-            if pain_text:
-                extra_parts.append(f"用户关心的点: {pain_text}")
-        elif insights.get("pain_points"):
-            extra_parts.append(f"用户关心的点: {insights['pain_points']}")
-
-        if extra_parts:
-            insights_content = "【用户反馈参考】\n" + "\n".join(f"- {p}" for p in extra_parts) + "\n\n"
-
-    base_content = f"{struct_info}{insights_content}"
-
-    # 禁止编造规则
-    constraints = """【禁止编造信息（必须严格执行）】
-1. 只能使用下方商品详细信息中明确有的信息，禁止编造
-2. 严禁编造：售后政策、价格优惠、销量数据、品牌背书
-3. 不能说"第一"、"最"、"顶级"等绝对化表述
-4. 如果某项商品信息为空，该部分可简写或留空，严禁编造
-
-【话术风格要求】
-✅ 开头直接介绍产品本身，不是问问题
-✅ 像产品说明书一样专业讲解，不是情感共鸣
-✅ 用具体材质、工艺、技术术语，不是模糊形容
-✅ 有展示感（"大家看"、"先看看"），不是自说自话
-❌ 禁止问问题式开头（"你有没有觉得..."、"是不是..."
-❌ 禁止罗列卖点式介绍（"保暖、透气、舒适..."
-❌ 禁止编造数据或功能
+    # Prompt
+    constraints = """【规则】
+1. 只用商品信息中的内容，严禁编造
+2. 禁止说"第一"、"最"
+3. 口语化表达60%以上
 
 """
 
-    prompt = f"""你是一名专业的抖音直播带货主播，擅长产品讲解和卖点输出。
-你的任务是：根据商品详细信息，生成专业的直播带货话术。
+    prompt = f"""是一名电商直播间的资深讲款口播策划，服务对象是鞋服类零售商家。
+你的任务是：根据商品结构化信息和用户评论，生成一套适合直播讲解的完整话术。
 
-【商品详细信息】
-{struct_info if struct_info else "(无详细商品信息)"}
+商品信息：
+{struct_info if struct_info else "(无)"}
 
-{insights_content if insights_content else ""}
+用户评论：
+{user_comments_text if user_comments_text else "(无)"}
+
 {constraints}
 
-请返回JSON格式:
+【目标】
+输出要像主播在直播间边展示边讲款：
+1. 信息具体、可信、有画面感
+2. 语言自然口语化，但不过分浮夸
+3. 不是参数堆砌，也不是说明书复述
+4. 要让顾客听完知道：这是什么、好在哪、适合谁、适合什么场景
+
+【硬性约束】
+1. 只能使用输入中明确提供的信息，不能编造
+2. 禁止编造：价格、折扣、赠品、销量、售后政策、品牌背书、权威认证之外的信息
+3. 如果没有库存信息，不要写“最后几单”“马上断码”
+4. 如果没有尺码信息，不要写具体尺码推荐
+5. 如果没有颜色信息，不要展开颜色推荐
+6. 不要使用“最、顶级、全网第一、闭眼入”这类绝对化或低质带货词
+7. 不要把字段原样拼成说明书，要把商品事实转译成用户体验
+8. 请严格遵守以上所有规则，不要遗漏任何约束。
+
+【写作方式】
+每一段都尽量按照这个逻辑写：
+先讲事实，再讲这个事实带来的好处，最后落到穿着体验、使用场景或搭配场景。
+
+【品类适配规则】
+如果商品属于鞋类：
+- design 重点讲设计语言、鞋型轮廓、鞋身风格
+- material 重点讲鞋面、内里、鞋底、中底、脚感
+- details 重点讲鞋头、走线、拼接、缓震、抓地、防滑、防水透气等细节
+- pairing 重点讲搭配风格、通勤/休闲/户外等场景、颜色选择
+- offer 可结合尺码提醒、颜色选择、日常高频穿着价值自然收口
+
+如果商品属于服装/内衣/打底/外套类：
+- design 重点讲版型、领型、剪裁、穿着逻辑、适合内搭还是外穿
+- material 重点讲面料成分、厚薄、弹性、亲肤感、保暖/透气等特性
+- details 重点讲缝线、印标、接缝、里料、包裹感、安全等级、功能工艺
+- pairing 重点讲季节温度、穿搭层次、上学/通勤/居家/出街等场景、颜色搭配
+- offer 结合穿着频率、实用性、基础款价值做自然收口
+
+【风格要求】
+1. 像品牌直播间的主播在讲款，不是客服，不是广告标语
+2. 可以使用“大家看一下”“你们看这里”“这种细节其实一上手就能感受到”这类展示型表达
+3. 每段围绕一个重点，不要重复
+4. 少说空话，少说“高级感满满、质感在线”，除非后面马上接具体依据
+5. 语言要顺，但不要油腻，不要过度喊麦
+
+【输出字段定义】
+opening：
+讲清商品身份、核心价值、适合人群或大场景，快速把产品立住，200-300字
+
+design：
+讲外观/版型/设计逻辑，让用户理解这个产品的风格与定位+用户评论回答，300-400字
+
+material：
+讲材质、成分、工艺和带来的体感或脚感+用户评论回答，300-400字
+
+details：
+讲最能体现品质和差异化的细节，强化可信度+做工细节+用户评论回答，300-400字
+
+pairing：
+讲穿搭、颜色、温度、场景或使用方式，让用户有代入感+用户评论回答，300-400字
+
+offer：
+自然收口，强调实用性、适配人群、购买提醒；不能编优惠和库存，150-200字
+
+【长度要求】
+1. 每段200-3000字
+2. 每段不要重复上一段内容
+3. 全文要有完整讲款感，像一位主播能直接顺着讲下来
+
+【输出格式】
+只返回严格的JSON，不要多余文字，格式如下：
 {{
-    "opening": "开头引入，直接介绍产品（不是问问题）",
-    "material": "材质/面料介绍，具体材质名称和工艺特点",
-    "design": "版型/设计介绍，款式特点和适用场景",
-    "details": "细节介绍，做工、品质、对比等",
-    "pairing": "搭配建议，适用场景和颜色选择",
-    "offer": "促单话术，库存、尺码、优惠等"
-}}
-
-【输出要求】
-1. opening：直接介绍产品本身或设计灵感，比如"今天给大家带来的是..."、"各位老板看过来..."，要详细展开产品特点和使用场景，多用口语化表达
-2. material：具体材质名称，如"牛剖层皮革"、"EVA+橡胶双底"、"吸湿速干面料"等，需要详细描述材质特性、工艺优点和穿着体验，多用大白话解释
-3. design：专业版型说明+适用场景，详细介绍剪裁设计、风格特点和适合的穿搭场合，用通俗易懂的语言描述
-4. details：对比说明+展示感话术，如"大家看一下这个走线..."、"真的，我跟你讲..."，要详细描述细节做工、品质对比和独特设计，多用口语化表达
-5. pairing：场景适用+颜色搭配建议，结合商品特性给出具体的搭配方案、场合推荐和风格建议，用朋友聊天的语气
-6. offer：库存有限、尺码提醒、断码风险等自然促单，要有紧迫感并给出具体的优惠或限时信息，多用"家人们"、"最后"、"抓紧"等口语
-
-【重要】每个部分 100-150 字即可，总计约 600-900 字。不要过度展开，保持简洁有力。口语化表达占比60%以上，像真的主播在直播间跟观众聊天一样。
-只返回JSON，不要有其他内容。"""
+    "opening": "...",
+    "design": "...",
+    "material": "...",
+    "details": "...",
+    "pairing": "...",
+    "offer": "..."
+}}"""
 
     return prompt
 

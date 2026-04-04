@@ -99,8 +99,7 @@ class ProductionService:
 
     def _extract_insights_from_comments(self, comments: List[str]) -> Dict[str, Any]:
         """
-        从评论中提取简单洞察（关键词和情感）
-        这是一个轻量级的分析，不依赖额外 AI 调用
+        从评论中提取洞察，同时保留原始评论供话术融入
         """
         if not comments:
             return {}
@@ -130,7 +129,8 @@ class ProductionService:
             "pain_points": list(set(pain_keywords))[:5],
             "selling_points": list(set(positive_keywords))[:5],
             "concerns": list(set(negative_keywords))[:3],
-            "use_cases": []
+            "use_cases": [],
+            "original_comments": comments[:5]  # 保留原始评论供话术融入
         }
 
     def rewrite_script(self, script: Dict[str, Any], mode: str) -> Dict[str, Any]:
