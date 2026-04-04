@@ -16,8 +16,8 @@ class BaseAIService:
 
     def __init__(self):
         self.api_key = settings.minimax_api_key or "your-api-key-here"
-        self.base_url = "https://api.minimax.chat/v1/text/chatcompletion_pro"
-        self.model = "abab5.5-chat"
+        self.base_url = "https://api.minimax.chat/v1/text/chatcompletion_v2"
+        self.model = "MiniMax-M2.7"
 
     # ==================== Core API Methods ====================
 
@@ -25,25 +25,18 @@ class BaseAIService:
         """Call MiniMax API with retry logic"""
         payload = {
             "model": self.model,
-            "bot_setting": [
-                {
-                    "bot_name": "助手",
-                    "content": "你是一个电商消费者洞察分析师。请严格按照JSON格式返回,不要返回任何解释文字。"
-                }
-            ],
             "messages": [
                 {
-                    "sender_type": "USER",
-                    "sender_name": "用户",
-                    "text": prompt
+                    "role": "system",
+                    "content": "你是专业抖音电商直播间讲款主播，严格按要求输出直播话术，只返回JSON格式，不输出任何多余文字、备注或解释。"
+                },
+                {
+                     "role": "user",
+                     "content": prompt
                 }
             ],
-            "reply_constraints": {
-                "sender_type": "BOT",
-                "sender_name": "助手"
-            },
             "temperature": 0.3,
-            "max_tokens": 2000
+            "max_tokens": 8000
         }
 
         headers = {
@@ -60,7 +53,7 @@ class BaseAIService:
                     self.base_url,
                     headers=headers,
                     json=payload,
-                    timeout=30,
+                    timeout=120,
                     verify=True
                 )
                 response.raise_for_status()

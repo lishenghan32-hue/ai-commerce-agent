@@ -79,9 +79,9 @@ class AIServiceScriptMixin(BaseAIService):
             prompt = prompts.build_single_style_script_prompt(insights, structured)
             logger.info(f"生成话术的prompt长度: {len(prompt)}")
             raw_response = self._call_api(prompt)
-            logger.info(f"AI返回的原始响应: {raw_response[:200]}...")
+            logger.info(f"AI返回的原始响应: {raw_response[:800]}...")
             json_response = self._extract_json_with_llm(raw_response)
-            logger.info(f"解析后的JSON: {json_response[:200]}...")
+            logger.info(f"解析后的JSON: {json_response[:800]}...")
             parsed = json.loads(json_response)
 
             logger.info(f"解析后的话术字段: {list(parsed.keys())}")
